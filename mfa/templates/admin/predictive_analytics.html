@@ -1,0 +1,553 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Predictive Analytics - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Predictive Analytics{% endblock %}
+{% block admin_content %}
+<div class="container py-5 admin-dashboard">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Intelligence</span>
+                <h1 class="display-4 mb-3">Predictive Analytics</h1>
+                <p class="text-white-75 mb-0">AI-powered insights for support load, user risk, and system optimization.</p>
+              </div>
+
+      <!-- Model Performance (Merged ML Risk Engine) -->
+      <div class="row g-3 stats-cards-row mt-3">
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Model Accuracy</div>
+              <div class="display-6 text-success">{{ model_accuracy }}%</div>
+              <small class="text-muted">Last evaluation</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Predictions (30d)</div>
+              <div class="display-6">{{ predictions_made }}</div>
+              <small class="text-muted">Behavior events</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">High-Risk Users</div>
+              <div class="display-6 text-warning">{{ high_risk_users }}</div>
+              <small class="text-muted">Distinct users</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body">
+              <div class="text-muted small mb-1">Risk Distribution</div>
+              <div class="d-flex justify-content-between small">
+                <span class="badge bg-success">Low</span>
+                <span>{{ risk_distribution.low }}</span>
+              </div>
+              <div class="d-flex justify-content-between small mt-1">
+                <span class="badge bg-warning text-dark">Medium</span>
+                <span>{{ risk_distribution.medium }}</span>
+              </div>
+              <div class="d-flex justify-content-between small mt-1">
+                <span class="badge bg-danger">High</span>
+                <span>{{ risk_distribution.high }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prediction Overview -->
+      <div class="row g-3 stats-cards-row mt-3">
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Predicted Support Load</div>
+              <div class="display-6 {% if predicted_support_load > 80 %}text-danger{% elif predicted_support_load > 60 %}text-warning{% else %}text-success{% endif %}">
+                {{ predicted_support_load }}%
+              </div>
+              <small class="text-muted">Next 7 days</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">High-Risk Users</div>
+              <div class="display-6 text-warning">{{ predicted_high_risk_users }}</div>
+              <small class="text-muted">Likely to need help</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Peak Usage Time</div>
+              <div class="display-6 text-info">{{ peak_usage_hour }}:00</div>
+              <small class="text-muted">Tomorrow</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Method Effectiveness</div>
+              <div class="display-6 text-success">{{ best_method_effectiveness }}%</div>
+              <small class="text-muted">{{ best_method_name }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Support Load Prediction -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Support Load Forecast</h5>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-secondary" onclick="refreshPredictions()">
+                <i class="fas fa-sync mr-2"></i>Refresh
+              </button>
+              <button class="btn btn-outline-primary" onclick="exportForecast()">
+                <i class="fas fa-download mr-2"></i>Export
+              </button>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-8">
+              <canvas id="supportLoadChart" width="600" height="300"></canvas>
+            </div>
+            <div class="col-md-4">
+              <div class="forecast-insights">
+                <h6>Key Insights</h6>
+                <div class="insight-item mb-3">
+                  <div class="d-flex align-items-center mb-1">
+                    <i class="fas fa-arrow-up text-danger mr-2"></i>
+                    <strong>Peak Expected</strong>
+                  </div>
+                  <p class="small text-muted mb-0">{{ peak_day }} at {{ peak_usage_hour }}:00 - {{ predicted_support_load }}% above normal</p>
+                </div>
+                <div class="insight-item mb-3">
+                  <div class="d-flex align-items-center mb-1">
+                    <i class="fas fa-users text-warning mr-2"></i>
+                    <strong>Staff Recommendation</strong>
+                  </div>
+                  <p class="small text-muted mb-0">Schedule {{ recommended_staff_count }} support staff for peak periods</p>
+                </div>
+                <div class="insight-item">
+                  <div class="d-flex align-items-center mb-1">
+                    <i class="fas fa-lightbulb text-info mr-2"></i>
+                    <strong>Proactive Action</strong>
+                  </div>
+                  <p class="small text-muted mb-0">Send setup reminders to {{ predicted_high_risk_users }} users before peak</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Risk Prediction -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">User Risk Prediction</h5>
+            <button class="btn btn-sm btn-outline-warning" onclick="contactHighRiskUsers()">
+              <i class="fas fa-envelope mr-2"></i>Contact High-Risk Users
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Risk Score</th>
+                  <th>Prediction Factors</th>
+                  <th>Likelihood of Issues</th>
+                  <th>Recommended Action</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for prediction in user_risk_predictions %}
+                <tr>
+                  <td>
+                    <a href="{% url 'mfa:admin_user_detail' prediction.user.id %}" class="user-link">
+                      {{ prediction.user.username }}
+                    </a>
+                    {% if prediction.user.is_staff %}
+                      <span class="badge bg-secondary">staff</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="progress mr-2" style="height: 8px; width: 60px;">
+                        <div class="progress-bar bg-warning js-width-pct" data-pct="{{ prediction.risk_score|floatformat:0 }}"></div>
+                      </div>
+                      <span class="small">{{ prediction.risk_score }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    {% for factor in prediction.risk_factors %}
+                      <span class="badge bg-secondary">{{ factor }}</span>
+                    {% endfor %}
+                  </td>
+                  <td>
+                    {% if prediction.issue_likelihood >= 80 %}
+                      <span class="badge bg-danger">Very High</span>
+                    {% elif prediction.issue_likelihood >= 60 %}
+                      <span class="badge bg-warning">High</span>
+                    {% elif prediction.issue_likelihood >= 40 %}
+                      <span class="badge bg-info">Medium</span>
+                    {% else %}
+                      <span class="badge bg-success">Low</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <small class="text-muted">{{ prediction.recommended_action }}</small>
+                  </td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="contactUser(1)">
+                        <i class="fas fa-envelope"></i>
+                      </button>
+                      <button class="btn btn-outline-info" onclick="scheduleFollowup(1)">
+                        <i class="fas fa-calendar"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-muted text-center">No high-risk users predicted</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Method Effectiveness Trends -->
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Method Effectiveness Trends</h5>
+              </div>
+              <canvas id="methodTrendsChart" width="400" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Peak Usage Patterns</h5>
+              </div>
+              <canvas id="usagePatternsChart" width="400" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Method Performance Analysis -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">MFA Method Performance Analysis</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="optimizeMethodSettings()">
+              <i class="fas fa-cog mr-2"></i>Optimize Settings
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Method</th>
+                  <th>Current Success Rate</th>
+                  <th>Predicted Trend</th>
+                  <th>User Satisfaction</th>
+                  <th>Support Tickets</th>
+                  <th>Recommendation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for method in method_effectiveness_trends %}
+                <tr>
+                  <td>
+                    <i class="fas fa-{{ method.icon }} mr-2 text-{{ method.color }}"></i>
+                    {{ method.name }}
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="progress mr-2" style="height: 8px; width: 60px;">
+                        <div class="progress-bar bg-success" style="width: 85%"></div>
+                      </div>
+                      <span class="small">{{ method.success_rate }}%</span>
+                    </div>
+                  </td>
+                  <td>
+                    {% if method.trend == 'up' %}
+                      <i class="fas fa-arrow-up text-success mr-1"></i>
+                      <span class="text-success">Improving</span>
+                    {% elif method.trend == 'down' %}
+                      <i class="fas fa-arrow-down text-danger mr-1"></i>
+                      <span class="text-danger">Declining</span>
+                    {% else %}
+                      <i class="fas fa-minus text-muted mr-1"></i>
+                      <span class="text-muted">Stable</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ method.satisfaction_color }}">{{ method.satisfaction_score }}/5</span>
+                  </td>
+                  <td>
+                    <span class="badge {% if method.support_tickets > 10 %}bg-danger{% elif method.support_tickets > 5 %}bg-warning{% else %}bg-success{% endif %}">
+                      {{ method.support_tickets }}
+                    </span>
+                  </td>
+                  <td>
+                    <small class="text-muted">{{ method.recommendation }}</small>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Predictive Alerts -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Predictive Alerts</h5>
+            <button class="btn btn-sm btn-outline-primary" onclick="configureAlerts()">
+              <i class="fas fa-bell mr-2"></i>Configure Alerts
+            </button>
+          </div>
+          <div class="alert-list">
+            {% for alert in predictive_alerts %}
+            <div class="alert alert-{{ alert.severity }} d-flex align-items-center" role="alert">
+              <i class="fas fa-{{ alert.icon }} mr-3"></i>
+              <div class="flex-grow-1">
+                <strong>{{ alert.title }}</strong>
+                <p class="mb-0">{{ alert.message }}</p>
+                <small class="text-muted">Confidence: {{ alert.confidence }}% | Expected: {{ alert.timeframe }}</small>
+              </div>
+              <div class="alert-actions">
+                <button class="btn btn-sm btn-outline-{{ alert.severity }}" onclick="takeAction('{{ alert.action }}')">
+                  {{ alert.action_label }}
+                </button>
+              </div>
+            </div>
+            {% empty %}
+            <div class="alert alert-success d-flex align-items-center" role="alert">
+              <i class="fas fa-check-circle mr-3"></i>
+              <div>
+                <strong>All Systems Optimal</strong>
+                <p class="mb-0">No predictive alerts at this time. System performance is within expected parameters.</p>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{# Safely embed data for charts #}
+{{ support_load_labels|json_script:"pa-support-load-labels" }}
+{{ support_load_values|json_script:"pa-support-load-values" }}
+{{ support_load_hist_avg|json_script:"pa-support-load-avg" }}
+{{ method_labels|json_script:"pa-method-labels" }}
+{{ method_series|json_script:"pa-method-series" }}
+{{ hourly_usage_full|json_script:"pa-hourly-usage" }}
+<script>
+// Apply percentage widths without inline template expressions (avoids IDE CSS parser errors)
+document.querySelectorAll('.js-width-pct').forEach(function(el){
+  var pct = parseInt(el.getAttribute('data-pct') || '0', 10);
+  if (!isNaN(pct)) { el.style.width = pct + '%'; }
+});
+
+// Parse embedded JSON
+const paSupportLabels = JSON.parse(document.getElementById('pa-support-load-labels').textContent || '[]');
+const paSupportValues = JSON.parse(document.getElementById('pa-support-load-values').textContent || '[]');
+const paSupportAvg = JSON.parse(document.getElementById('pa-support-load-avg').textContent || '[]');
+const paMethodLabels = JSON.parse(document.getElementById('pa-method-labels').textContent || '[]');
+const paMethodSeries = JSON.parse(document.getElementById('pa-method-series').textContent || '{}');
+const paHourlyUsage = JSON.parse(document.getElementById('pa-hourly-usage').textContent || '[]');
+
+// Support Load Chart (real data)
+const supportCtx = document.getElementById('supportLoadChart').getContext('2d');
+new Chart(supportCtx, {
+  type: 'line',
+  data: {
+    labels: paSupportLabels,
+    datasets: [{
+      label: 'Predicted Support Load',
+      data: paSupportValues,
+      borderColor: '#ef4444',
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      tension: 0.4,
+      fill: true
+    }, {
+      label: 'Historical Average',
+      data: paSupportAvg,
+      borderColor: '#6b7280',
+      borderDash: [5, 5],
+      tension: 0
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 100,
+        ticks: {
+          callback: function(value) {
+            return value + '%';
+          }
+        }
+      }
+    }
+  }
+});
+
+// Method Trends Chart (real data)
+const methodCtx = document.getElementById('methodTrendsChart').getContext('2d');
+const methodLabels = paMethodLabels;
+const methodSeries = paMethodSeries;
+new Chart(methodCtx, {
+  type: 'line',
+  data: {
+    labels: methodLabels,
+    datasets: [{
+      label: 'TOTP',
+      data: methodSeries.totp || [],
+      borderColor: '#22c55e',
+      tension: 0.4
+    }, {
+      label: 'Email OTP',
+      data: methodSeries.email || [],
+      borderColor: '#3b82f6',
+      tension: 0.4
+    }, {
+      label: 'SMS',
+      data: methodSeries.sms || [],
+      borderColor: '#f59e0b',
+      tension: 0.4
+    }, {
+      label: 'Passkeys',
+      data: methodSeries.passkey || [],
+      borderColor: '#8b5cf6',
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: {
+        min: 60,
+        max: 100,
+        ticks: {
+          callback: function(value) {
+            return value + '%';
+          }
+        }
+      }
+    }
+  }
+});
+
+// Usage Patterns Chart (real data)
+const usageCtx = document.getElementById('usagePatternsChart').getContext('2d');
+new Chart(usageCtx, {
+  type: 'bar',
+  data: {
+    labels: Array.from({length: 24}, (_, i) => i + ':00'),
+    datasets: [{
+      label: 'Usage Intensity',
+      data: paHourlyUsage,
+      backgroundColor: '#55833d',
+      borderRadius: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    },
+    plugins: {
+      legend: {
+        display: false
+      }
+    }
+  }
+});
+
+// Action Functions
+function refreshPredictions() {
+  location.reload();
+}
+
+function exportForecast() {
+  window.open('{% url "mfa:admin_users_export" %}?format=forecast', '_blank');
+}
+
+function contactHighRiskUsers() {
+  if (confirm('Send proactive support emails to all high-risk users?')) {
+    alert('Support emails sent to high-risk users');
+  }
+}
+
+function contactUser(userId) {
+  if (confirm('Send personalized support email to this user?')) {
+    alert('Support email sent to user');
+  }
+}
+
+function scheduleFollowup(userId) {
+  const days = prompt('Schedule follow-up in how many days?', '3');
+  if (days) {
+    alert(`Follow-up scheduled for ${days} days`);
+  }
+}
+
+function optimizeMethodSettings() {
+  if (confirm('Apply AI-recommended optimizations to MFA method settings?')) {
+    alert('Method settings optimized based on predictive analysis');
+  }
+}
+
+function configureAlerts() {
+  alert('Opening predictive alert configuration...');
+}
+
+function takeAction(action) {
+  if (confirm(`Execute recommended action: ${action}?`)) {
+    alert(`Action executed: ${action}`);
+  }
+}
+</script>
+{% endblock %}

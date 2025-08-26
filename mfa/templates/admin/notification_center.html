@@ -1,0 +1,455 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Notification Center - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Notification Center{% endblock %}
+{% block admin_content %}
+<div class="container py-5 admin-dashboard">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Admin</span>
+                <h1 class="display-4 mb-3">Notification Center</h1>
+                <p class="text-white-75 mb-0">Real-time security alerts and system notifications management.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="row g-3 stats-cards-row mt-3">
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Unread</div>
+              <div class="display-6 text-info">{{ unread_notifications }}</div>
+              <i class="fas fa-envelope text-info mt-2"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Critical Alerts</div>
+              <div class="display-6 text-danger">{{ critical_alerts }}</div>
+              <i class="fas fa-exclamation-triangle text-danger mt-2"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Security Alerts</div>
+              <div class="display-6 text-warning">{{ security_alerts|default:5 }}</div>
+              <i class="fas fa-shield-alt text-warning mt-2"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Total Notifications</div>
+              <div class="display-6">{{ total_notifications|default:42 }}</div>
+              <i class="fas fa-bell mt-2"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Management -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+              <h5 class="mb-0">
+                <i class="fas fa-bell mr-2"></i>Notification Management
+              </h5>
+              <div class="d-flex flex-wrap justify-content-center justify-content-md-right align-items-center mt-2 mt-md-0" style="gap: 0.5rem;">
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshNotifications()">
+                  <i class="fas fa-sync-alt"></i><span class="d-none d-md-inline ml-1">Refresh</span>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="exportNotifications()">
+                  <i class="fas fa-download"></i><span class="d-none d-md-inline ml-1">Export</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="list-group list-group-flush">
+            {% for notification in notifications %}
+            <div class="list-group-item px-0 {% if not notification.is_read %}bg-light{% endif %}">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Recent Notifications</h5>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-outline-secondary active" onclick="filterNotifications('all')">All</button>
+                  <button class="btn btn-outline-secondary" onclick="filterNotifications('unread')">Unread</button>
+                  <button class="btn btn-outline-secondary" onclick="filterNotifications('critical')">Critical</button>
+                </div>
+              </div>
+              <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                  <!-- Critical Alert -->
+                  <div class="list-group-item notification-item unread critical" data-type="critical">
+                    <div class="d-flex align-items-start">
+                      <div class="notification-icon bg-danger text-white me-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                      </div>
+                      <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                          <div>
+                            <h6 class="mb-1">Multiple Failed Login Attempts</h6>
+                            <p class="mb-1 text-muted">User 'admin' has 5 failed login attempts from IP 192.168.1.100</p>
+                            <small class="text-muted">2 minutes ago</small>
+                          </div>
+                          <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="viewNotification('notif1')">
+                              <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="markRead('notif1')">
+                              <i class="fas fa-check"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Security Alert -->
+                  <div class="list-group-item notification-item unread security" data-type="security">
+                    <div class="d-flex align-items-start">
+                      <div class="notification-icon bg-warning text-white me-3">
+                        <i class="fas fa-shield-alt"></i>
+                      </div>
+                      <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                          <div>
+                            <h6 class="mb-1">New Device Login</h6>
+                            <p class="mb-1 text-muted">User 'john.doe' logged in from a new device (Chrome/Windows)</p>
+                            <small class="text-muted">15 minutes ago</small>
+                          </div>
+                          <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="viewNotification('notif2')">
+                              <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-success" onclick="markRead('notif2')">
+                              <i class="fas fa-check"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Info Notification -->
+                  <div class="list-group-item notification-item read info" data-type="info">
+                    <div class="d-flex align-items-start">
+                      <div class="notification-icon bg-info text-white me-3">
+                        <i class="fas fa-info-circle"></i>
+                      </div>
+                      <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                          <div>
+                            <h6 class="mb-1">System Maintenance Completed</h6>
+                            <p class="mb-1 text-muted">Scheduled maintenance has been completed successfully</p>
+                            <small class="text-muted">1 hour ago</small>
+                          </div>
+                          <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="viewNotification('notif3')">
+                              <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteNotification('notif3')">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Success Notification -->
+                  <div class="list-group-item notification-item read success" data-type="success">
+                    <div class="d-flex align-items-start">
+                      <div class="notification-icon bg-success text-white me-3">
+                        <i class="fas fa-check-circle"></i>
+                      </div>
+                      <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                          <div>
+                            <h6 class="mb-1">Backup Completed</h6>
+                            <p class="mb-1 text-muted">Daily database backup completed successfully</p>
+                            <small class="text-muted">2 hours ago</small>
+                          </div>
+                          <div class="notification-actions">
+                            <button class="btn btn-sm btn-outline-primary me-1" onclick="viewNotification('notif4')">
+                              <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteNotification('notif4')">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Notification Settings -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header">
+            <h5 class="mb-3"><i class="fas fa-cog me-2"></i>Notification Settings</h5>
+          </div>
+          <div class="row">
+            <div class="col-md-3 mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                <label class="form-check-label" for="emailNotifications">
+                  Email Notifications
+                </label>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="criticalAlerts" checked>
+                <label class="form-check-label" for="criticalAlerts">
+                  Critical Alerts
+                </label>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="securityAlerts" checked>
+                <label class="form-check-label" for="securityAlerts">
+                  Security Alerts
+                </label>
+              </div>
+            </div>
+            <div class="col-md-3 mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="systemUpdates" checked>
+                <label class="form-check-label" for="systemUpdates">
+                  System Updates
+                </label>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveSettings()">
+            <i class="fas fa-save me-2"></i>Save Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header">
+            <h5 class="mb-3"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+          </div>
+          <div class="row">
+            <div class="col-md-3 mb-2">
+              <button class="btn btn-outline-primary w-100" onclick="markAllRead()">
+                <i class="fas fa-check me-2"></i>Mark All Read
+              </button>
+            </div>
+            <div class="col-md-3 mb-2">
+              <button class="btn btn-outline-secondary w-100" onclick="clearOldNotifications()">
+                <i class="fas fa-trash me-2"></i>Clear Old
+              </button>
+            </div>
+            <div class="col-md-3 mb-2">
+              <button class="btn btn-outline-info w-100" onclick="viewAllLogs()">
+                <i class="fas fa-list me-2"></i>View All Logs
+              </button>
+            </div>
+            <div class="col-md-3 mb-2">
+              <button class="btn btn-outline-info w-100" onclick="exportNotifications()">
+                <i class="fas fa-download me-2"></i>Export Notifications
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+  {{ block.super }}
+<style>
+.notification-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notification-item.unread {
+  background-color: #f8f9fa;
+  border-left: 4px solid #007bff;
+}
+
+.notification-item.read {
+  opacity: 0.7;
+}
+
+.notification-actions {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.notification-item:hover .notification-actions {
+  opacity: 1;
+}
+
+.notification-item h6 {
+  font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAllRead() {
+  if (confirm('Mark all notifications as read?')) {
+    fetch('{% url "mfa:admin_mark_all_read" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    });
+  }
+}
+
+function refreshNotifications() {
+  location.reload();
+}
+
+function filterNotifications(type) {
+  const items = document.querySelectorAll('.notification-item');
+  const buttons = document.querySelectorAll('.btn-group .btn');
+  
+  // Update active button
+  buttons.forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  
+  // Filter items
+  items.forEach(item => {
+    if (type === 'all') {
+      item.style.display = 'block';
+    } else if (type === 'unread') {
+      item.style.display = item.classList.contains('unread') ? 'block' : 'none';
+    } else if (type === 'critical') {
+      item.style.display = item.classList.contains('critical') ? 'block' : 'none';
+    }
+  });
+}
+
+function viewNotification(notifId) {
+  alert('View notification details for: ' + notifId);
+}
+
+function markRead(notifId) {
+  fetch('{% url "mfa:admin_mark_notification_read" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({
+      notification_id: notifId
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  });
+}
+
+function deleteNotification(notifId) {
+  if (confirm('Delete this notification?')) {
+    fetch('{% url "mfa:admin_delete_notification" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({
+        notification_id: notifId
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    });
+  }
+}
+
+function saveSettings() {
+  const settings = {
+    email_notifications: document.getElementById('emailNotifications').checked,
+    critical_alerts: document.getElementById('criticalAlerts').checked,
+    security_alerts: document.getElementById('securityAlerts').checked,
+    system_updates: document.getElementById('systemUpdates').checked
+  };
+  
+  fetch('{% url "mfa:admin_save_notification_settings" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify(settings)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Settings saved successfully');
+    } else {
+      alert('Error: ' + data.error);
+    }
+  });
+}
+
+function createAlert() {
+  alert('Create alert functionality would be implemented here');
+}
+
+function viewAllLogs() {
+  window.location.href = '{% url "mfa:admin_logs" %}';
+}
+
+function exportNotifications() {
+  alert('Export notifications functionality would be implemented here');
+}
+</script>
+{% endblock %}

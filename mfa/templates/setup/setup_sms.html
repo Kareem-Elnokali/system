@@ -1,0 +1,85 @@
+{% extends 'mfa/base.html' %}
+{% load static %}
+{% block title %}Set Up SMS Verification - {{ site_name }}{% endblock %}
+{% block content %}
+    {% include 'partials/navbar.html' %}
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-7 col-lg-5">
+                <div class="card border shadow-lg p-4">
+                    <h2 class="h2Title text-center mb-2" style="font-size: calc(1.9rem + 0.5vw) !important;"><span class="brand-color">S</span>et Up SMS Verification</h2>
+                    <p class="text-center text-muted mb-3">Verify your phone number using our secure system. Please include your country code.</p>
+                    <div id="message-container"></div>
+                    <div id="firebaseui-auth-container"></div>
+                    <div id="loader" class="text-center d-none">Loading...</div>
+                    <div class="mt-3 auth-helper text-center">
+                        <a href="{% url 'mfa:security_hub' %}" class="brand-link">Back to Security Hub</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include 'partials/footer.html' %}
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
+    <script>
+        const messageContainer = document.getElementById('message-container');
+        try {
+            const firebaseConfig = JSON.parse('{{ firebase_config_json|escapejs }}');
+            console.log('Firebase Config:', firebaseConfig);
+            const missingKeys = Object.keys(firebaseConfig).filter(key => !firebaseConfig[key]);
+            if (missingKeys.length > 0) {
+                throw new Error(`Missing Firebase config values for: ${missingKeys.join(', ')}. Please check your environment variables.`);
+            }
+            firebase.initializeApp(firebaseConfig);
+        } catch (e) {
+            console.error('Firebase Init Error:', e);
+            showMessage('This feature is currently unavailable and will be set up soon. Please check back later.', 'info');
+        }
+        const uiConfig = {
+            signInSuccessUrl: '{% url "mfa:security_hub" %}',
+            signInOptions: [
+                firebase.auth.PhoneAuthProvider.PROVIDER_ID
+            ],
+            tosUrl: '/terms-of-service',
+            privacyPolicyUrl: '/privacy-policy',
+            callbacks: {
+                signInSuccessWithAuthResult: function(authResult, redirectUrl) {
+                    authResult.user.getIdToken().then(idToken => {
+                        fetch('{% url "mfa:verify_sms_setup" %}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({ id_token: idToken })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showMessage('Phone number verified successfully! Redirecting...', 'success');
+                                window.location.href = '{% url "mfa:security_hub" %}';
+                            } else {
+                                showMessage(`Server-side verification failed: ${data.error}`, 'danger');
+                            }
+                        }).catch(error => {
+                            console.error('Error during fetch:', error);
+                            showMessage(`An error occurred: ${error}`, 'danger');
+                        });
+                    });
+                    return false;
+                },
+                uiShown: function() {
+                    document.getElementById('loader').classList.add('d-none');
+                }
+            }
+        };
+        const ui = new firebaseui.auth.AuthUI(firebase.auth());
+        ui.start('#firebaseui-auth-container', uiConfig);
+        function showMessage(message, type) {
+            messageContainer.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+</script>
+{% endblock %}

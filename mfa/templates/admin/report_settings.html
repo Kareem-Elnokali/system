@@ -1,0 +1,261 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Security Summary Email Settings - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Reports{% endblock %}
+{% block admin_content %}
+  <main class="container py-5 flex-grow-1">
+    <div class="row justify-content-center">
+      <div class="col-md-12">
+        <div class="glass-frame hero-unified mb-4 rounded-3">
+          <div class="row align-items-stretch no-gutters">
+            <div class="col-12 d-flex pr-lg-0">
+              <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+                <div class="hero-body">
+                  <span class="badge badge-pill mb-3">Admin</span>
+                  <h1 class="display-5 mb-2">Reports</h1>
+                  <p class="text-white-75 mb-0">Configure automatic, scheduled HTML-only security summaries.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="section-header section-header-on-green d-flex justify-content-between align-items-center flex-wrap mb-3">
+              <h5 class="mb-2 mb-md-0 text-white">Security Summary Emails</h5>
+            </div>
+            <style>
+              /* Buttons row */
+              .admin-actions { flex-wrap: wrap; gap: 10px; }
+              .admin-actions .btn { position: relative; z-index: 2; pointer-events: auto; }
+              .admin-actions .btn + .btn { margin-left: 10px; }
+              .admin-actions > a, .admin-actions > div { margin-bottom: 10px; }
+              /* Match Settings button radius and sizing */
+              .btn-rounded-6 { border-radius: .375rem; } /* ~6px */
+              .btn-primary { background-color: #0d6efd; border-color: #0d6efd; }
+              .btn-primary:hover { background-color: #0b5ed7; border-color: #0a58ca; }
+              .btn-green { background-color: #4d6f38; border-color: #4d6f38; color: #fff; }
+              .btn-green:hover { background-color: #3f612c; border-color: #3f612c; color: #fff; }
+              /* Fix Bootstrap 4 checkbox negative left margin */
+              .form-check-input { margin-left: 0 !important; margin-right: .75rem; }
+              .form-check-label { margin-bottom: 0; }
+              .d-flex.align-items-center { align-items: center; }
+              /* Section spacing tweaks */
+              .card-body h5 { margin-bottom: .75rem; }
+              .card-body .form-group { margin-bottom: 1rem; }
+              @media (max-width: 576px) {
+                .admin-actions { flex-direction: column; align-items: stretch; }
+                .admin-actions .btn { width: 100%; justify-content: center; margin-left: 0 !important; }
+                .admin-actions .btn + .btn { margin-top: 10px; }
+              }
+            </style>
+            <p class="text-muted mb-4">Configure automatic, scheduled HTML-only security summaries</p>
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} py-2 small" role="alert">{{ message }}</div>
+              {% endfor %}
+            {% endif %}
+            <form method="post" novalidate>
+              {% csrf_token %}
+              <input type="hidden" name="send_now" id="send_now_field" value="0">
+              <div class="mb-4">
+                <h5 class="mb-3">Scheduling</h5>
+                <div class="d-flex align-items-center mb-3">
+                  <input class="form-check-input mr-2" type="checkbox" name="{{ form.report_enabled.name }}" id="{{ form.report_enabled.id_for_label }}" {% if form.report_enabled.value %}checked{% endif %}>
+                  <label class="form-check-label d-flex align-items-center mb-0" for="{{ form.report_enabled.id_for_label }}">
+                    <i class="fas fa-calendar-check text-success mr-3 fa-fw" style="width: 20px;"></i>
+                    <span>
+                      <strong>Enable Scheduled Summary Emails</strong>
+                      <small class="text-muted d-block">Sends a periodic email with key security KPIs to selected recipients</small>
+                    </span>
+                  </label>
+                </div>
+  <div class="modal fade" id="sendNowModal" tabindex="-1" role="dialog" aria-labelledby="sendNowModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="sendNowModalLabel">Confirm Immediate Send</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <p>This will send the latest summary to all configured recipients now.</p>
+          <p>Type <strong>SEND</strong> to confirm.</p>
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text"><i class="fas fa-paper-plane" aria-hidden="true"></i></span>
+            </div>
+            <input type="text" class="form-control" id="sendNowConfirmText" placeholder="SEND" style="text-transform: uppercase;" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmSendNowBtn" style="border-radius: .25rem;" disabled>Confirm & Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+                <div class="form-group mb-3">
+                  <label for="{{ form.report_recipients.id_for_label }}"><strong>Recipient emails</strong></label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text"><i class="fas fa-envelope" aria-hidden="true"></i></span>
+                    </div>
+                    <input type="text" class="form-control" name="{{ form.report_recipients.name }}" id="{{ form.report_recipients.id_for_label }}" value="{{ form.report_recipients.value|default:'' }}" placeholder="admin@example.com, security@example.com" autocomplete="off" autocapitalize="off" spellcheck="false">
+                  </div>
+                  <small class="text-muted">Separate multiple addresses with commas or spaces. Duplicates are removed automatically.</small>
+                </div>
+                <div class="form-group mb-2">
+                  <label for="{{ form.report_frequency_days.id_for_label }}"><strong>Frequency (days)</strong></label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text"><i class="fas fa-calendar-alt" aria-hidden="true"></i></span>
+                    </div>
+                    <input type="number" min="1" class="form-control" name="{{ form.report_frequency_days.name }}" id="{{ form.report_frequency_days.id_for_label }}" value="{{ form.report_frequency_days.value|default:7 }}">
+                  </div>
+                </div>
+                <div class="form-group mb-2">
+                  <label for="{{ form.report_csv_days.id_for_label }}"><strong>CSV days</strong></label>
+                  <div class="input-group">
+                    <div class="input-group-prepend">
+                      <span class="input-group-text"><i class="fas fa-file-alt" aria-hidden="true"></i></span>
+                    </div>
+                    <input type="number" min="1" class="form-control" name="{{ form.report_csv_days.name }}" id="{{ form.report_csv_days.id_for_label }}" value="{{ form.report_csv_days.value|default:7 }}">
+                  </div>
+                  <small class="text-muted">Attach a CSV of MFA logs for the most recent N days to each summary email.</small>
+                </div>
+                <div class="small text-muted">
+                  Next send: {% if settings.report_next_send_at %}{{ settings.report_next_send_at|date:'Y-m-d H:i' }}{% else %}-{% endif %} | Last sent: {% if settings.report_last_sent_at %}{{ settings.report_last_sent_at|date:'Y-m-d H:i' }}{% else %}-{% endif %}
+                </div>
+              </div>
+              <div class="d-flex justify-content-end admin-actions mt-3">
+                <div>
+                  <button type="button" id="openSendNowBtn" class="btn btn-primary btn-rounded-6 d-inline-flex align-items-center mr-2 px-3 py-2" data-toggle="modal" data-target="#sendNowModal">
+                    <i class="fas fa-paper-plane mr-2"></i>Send Now
+                  </button>
+                  <button type="button" id="openSaveSettingsBtn" class="btn btn-green btn-rounded-6 d-inline-flex align-items-center px-3 py-2" data-toggle="modal" data-target="#saveSettingsModal">
+                    <i class="fas fa-save mr-2"></i>Save Settings
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="modal fade" id="saveSettingsModal" tabindex="-1" role="dialog" aria-labelledby="saveSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="saveSettingsModalLabel">Confirm Changes</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <p>To confirm these changes, please type <strong>CONFIRM</strong> in the box below.</p>
+          <div class="input-group">
+            <div class="input-group-prepend">
+              <span class="input-group-text"><i class="fas fa-shield-alt" aria-hidden="true"></i></span>
+            </div>
+            <input type="text" class="form-control" id="confirmationText" placeholder="CONFIRM" style="text-transform: uppercase;" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-green" id="confirmSaveBtn" style="border-radius: .25rem;" disabled>Confirm & Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block extra_css %}{{ block.super }}
+<style>
+  .section-header-on-green {
+    background: linear-gradient(135deg, rgba(118,185,87,0.98) 0%, rgba(63,111,44,0.98) 100%);
+    color: #ffffff !important;
+    margin: -1.25rem -1.25rem 0 -1.25rem; /* match .card-body default padding to avoid overflow */
+    padding: 1.25rem 1.5rem;
+    border-radius: 0.375rem 0.375rem 0 0;
+    overflow: hidden;
+    min-height: 60px;
+  }
+  .section-header-on-green h5 { font-weight: 600; }
+  .card { border-radius: .25rem; }
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+  $(function() {
+    $('#openSendNowBtn').on('click touchstart', function(e){
+      try { if ($.fn.modal) { $('#sendNowModal').modal('show'); } } catch(_) {}
+    });
+    $('#openSaveSettingsBtn').on('click touchstart', function(e){
+      try { if ($.fn.modal) { $('#saveSettingsModal').modal('show'); } } catch(_) {}
+    });
+    const $input = $('#confirmationText');
+    const $btn = $('#confirmSaveBtn');
+    const $form = $('form[method="post"]');
+    function updateState() {
+      const val = ($input.val() || '').toString().toUpperCase().trim();
+      $input.val(val);
+      const enable = val === 'CONFIRM';
+      if (enable) {
+        $btn.prop('disabled', false).removeClass('disabled').attr('aria-disabled', 'false');
+      } else {
+        $btn.prop('disabled', true).addClass('disabled').attr('aria-disabled', 'true');
+      }
+    }
+    $input.on('input keyup keydown change paste', updateState);
+    $('#saveSettingsModal').on('shown.bs.modal', function() {
+      updateState();
+      $input.trigger('focus');
+    });
+    $btn.on('click', function(e) {
+      if ($btn.prop('disabled') || $btn.hasClass('disabled')) {
+        e.preventDefault();
+        return;
+      }
+      $form.trigger('submit');
+    });
+    try {
+      $('#saveSettingsModal .btn[data-dismiss="modal"], #saveSettingsModal .close').on('click', function(){
+        if ($.fn.modal) { $('#saveSettingsModal').modal('hide'); }
+      });
+    } catch(_) {}
+    $('#saveSettingsModal').on('hidden.bs.modal', function () {
+      $input.val('');
+      $btn.prop('disabled', true);
+    });
+  });
+  $(function() {
+    const $sendInput = $('#sendNowConfirmText');
+    const $sendBtn = $('#confirmSendNowBtn');
+    const $form = $('form[method="post"]');
+    const $sendNowField = $('#send_now_field');
+    function updateSendState() {
+      const val = ($sendInput.val() || '').toString().toUpperCase().trim();
+      $sendInput.val(val);
+      $sendBtn.prop('disabled', val !== 'SEND');
+    }
+    $sendInput.on('input keyup keydown change paste', updateSendState);
+    $('#sendNowModal').on('shown.bs.modal', function() {
+      updateSendState();
+      $sendInput.trigger('focus');
+    });
+    $sendBtn.on('click', function(e) {
+      if ($sendBtn.prop('disabled')) {
+        e.preventDefault();
+        return;
+      }
+      $sendNowField.val('1');
+      $form.trigger('submit');
+    });
+    $('#sendNowModal').on('hidden.bs.modal', function () {
+      $sendInput.val('');
+      $sendBtn.prop('disabled', true);
+      $sendNowField.val('0');
+    });
+  });
+</script>
+{% endblock %}

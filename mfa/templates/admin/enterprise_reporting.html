@@ -1,0 +1,422 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Enterprise Reporting - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Enterprise Reporting{% endblock %}
+{% block admin_content %}
+    <div class="container py-5 admin-dashboard">
+      <div class="row justify-content-center">
+        <div class="col-md-12">
+          <div class="glass-frame hero-unified mb-4 rounded-3">
+            <div class="row align-items-stretch no-gutters">
+              <div class="col-12 d-flex pr-lg-0">
+                <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+                  <div class="hero-body">
+                    <span class="badge badge-pill mb-3">Enterprise</span>
+                    <h1 class="display-4 mb-3">📊 Enterprise Reporting</h1>
+                    <p class="text-white-75 mb-0">Comprehensive security analytics and business intelligence reports.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Report Generation Controls -->
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📈 Report Generation</h5>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-primary btn-sm" onclick="generateReport()">
+                    <i class="fas fa-chart-line"></i> Generate Report
+                  </button>
+                  <button class="btn btn-outline-secondary btn-sm" onclick="scheduleReport()">
+                    <i class="fas fa-clock"></i> Schedule
+                  </button>
+                </div>
+              </div>
+              
+              <div class="row mt-3">
+                <div class="col-md-6">
+                  <label class="form-label">Report Type</label>
+                  <select class="form-select" id="reportType">
+                    <option value="security">Security Overview</option>
+                    <option value="compliance">Compliance Report</option>
+                    <option value="user-activity">User Activity Analysis</option>
+                    <option value="threat-intelligence">Threat Intelligence</option>
+                    <option value="performance">Performance Metrics</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Time Period</label>
+                  <select class="form-select" id="timePeriod">
+                    <option value="24h">Last 24 Hours</option>
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                    <option value="90d">Last 90 Days</option>
+                    <option value="custom">Custom Range</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Executive Summary Cards (dynamic) -->
+          <div class="row g-3 stats-cards-row mt-3">
+            <div class="col-6 col-md-3">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">Total Reports</div>
+                  <div class="display-6">{{ reports_generated }}</div>
+                  <small class="text-muted">Last 30 days: {{ monthly_reports }}</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">Report Types</div>
+                  <div class="display-6">{{ reports_by_type|length }}</div>
+                  <small class="text-muted">Distinct</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">Avg Compliance Score</div>
+                  <div class="display-6">{{ compliance_score }}%</div>
+                  <small class="text-success">Higher is better</small>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">Scheduled Reports</div>
+                  <div class="display-6">{{ scheduled_reports }}</div>
+                  <small class="text-muted">Automation</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compliance KPIs (Merged) -->
+          <div class="card shadow-sm mb-4 rounded-3 mt-4">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">🛡️ Compliance KPIs</h5>
+              </div>
+              <div class="row g-3 mt-2">
+                <div class="col-6 col-md-3">
+                  <div class="card h-100">
+                    <div class="card-body text-center">
+                      <div class="text-muted small">Total Users</div>
+                      <div class="display-6">{{ total_users }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="card h-100">
+                    <div class="card-body text-center">
+                      <div class="text-muted small">Staff MFA</div>
+                      <div class="display-6 text-primary">{{ staff_mfa_compliance }}%</div>
+                      <small class="text-muted">{{ staff_users }} staff</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="card h-100">
+                    <div class="card-body text-center">
+                      <div class="text-muted small">Admin MFA</div>
+                      <div class="display-6 text-primary">{{ admin_mfa_compliance }}%</div>
+                      <small class="text-muted">{{ admin_users }} admins</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="card h-100">
+                    <div class="card-body text-center">
+                      <div class="text-muted small">Overall MFA</div>
+                      <div class="display-6 text-success">{{ overall_mfa_compliance }}%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-3 mt-2">
+                <div class="col-6 col-md-3">
+                  <div class="card h-100">
+                    <div class="card-body text-center">
+                      <div class="text-muted small">Password Resets (30d)</div>
+                      <div class="display-6">{{ recent_password_resets }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="card h-100">
+                    <div class="card-body text-center">
+                      <div class="text-muted small">Failed Access (30d)</div>
+                      <div class="display-6 text-warning">{{ failed_access_attempts }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-6">
+                  <div class="card h-100">
+                    <div class="card-body">
+                      <div class="text-muted small mb-1">Audit Coverage (30d)</div>
+                      <div class="d-flex justify-content-between small">
+                        <span class="badge bg-secondary">Login Attempts</span>
+                        <span>{{ audit_coverage.login_attempts }}</span>
+                      </div>
+                      <div class="d-flex justify-content-between small mt-1">
+                        <span class="badge bg-info">MFA Changes</span>
+                        <span>{{ audit_coverage.mfa_changes }}</span>
+                      </div>
+                      <div class="d-flex justify-content-between small mt-1">
+                        <span class="badge bg-dark">Admin Actions</span>
+                        <span>{{ audit_coverage.admin_actions }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recommendations -->
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">✅ Recommendations</h5>
+              </div>
+              {% if recommendations %}
+              <ul class="mt-3 mb-0">
+                {% for rec in recommendations %}
+                  <li>{{ rec }}</li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <p class="text-muted mt-3 mb-0">No recommendations at this time.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Recent Reports -->
+          <div class="card shadow-sm mb-4 rounded-3 mt-4">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📋 Recent Reports</h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="viewAllReports()">
+                  <i class="fas fa-list"></i> View All
+                </button>
+              </div>
+              
+              <div class="table-responsive mt-3">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Report Name</th>
+                      <th>Type</th>
+                      <th>Generated</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Monthly Security Overview</td>
+                      <td><span class="badge bg-primary">Security</span></td>
+                      <td>2 hours ago</td>
+                      <td><span class="badge bg-success">Complete</span></td>
+                      <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="downloadReport('monthly-security')">
+                          <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="viewReport('monthly-security')">
+                          <i class="fas fa-eye"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Compliance Audit Report</td>
+                      <td><span class="badge bg-warning">Compliance</span></td>
+                      <td>1 day ago</td>
+                      <td><span class="badge bg-success">Complete</span></td>
+                      <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="downloadReport('compliance-audit')">
+                          <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="viewReport('compliance-audit')">
+                          <i class="fas fa-eye"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>User Activity Analysis</td>
+                      <td><span class="badge bg-info">Activity</span></td>
+                      <td>3 days ago</td>
+                      <td><span class="badge bg-warning">Processing</span></td>
+                      <td>
+                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                          <i class="fas fa-spinner fa-spin"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Report Analytics Chart -->
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📊 Report Generation Trends</h5>
+                <div class="d-flex gap-2">
+                  <select class="form-select form-select-sm" id="chartPeriod">
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                  </select>
+                </div>
+              </div>
+              <canvas id="reportChart" style="height: 300px; max-height: 300px;"></canvas>
+            </div>
+          </div>
+
+          <!-- Scheduled Reports -->
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">⏰ Scheduled Reports</h5>
+                <button class="btn btn-outline-success btn-sm" onclick="addScheduledReport()">
+                  <i class="fas fa-plus"></i> Add Schedule
+                </button>
+              </div>
+              
+              <div class="row mt-3">
+                <div class="col-md-6">
+                  <div class="card border-left-primary">
+                    <div class="card-body">
+                      <h6>Weekly Security Summary</h6>
+                      <p class="text-muted mb-2">Every Monday at 9:00 AM</p>
+                      <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-success">Active</span>
+                        <div>
+                          <button class="btn btn-sm btn-outline-primary" onclick="editSchedule('weekly-security')">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <button class="btn btn-sm btn-outline-danger" onclick="deleteSchedule('weekly-security')">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card border-left-warning">
+                    <div class="card-body">
+                      <h6>Monthly Compliance Report</h6>
+                      <p class="text-muted mb-2">First day of each month at 8:00 AM</p>
+                      <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-success">Active</span>
+                        <div>
+                          <button class="btn btn-sm btn-outline-primary" onclick="editSchedule('monthly-compliance')">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <button class="btn btn-sm btn-outline-danger" onclick="deleteSchedule('monthly-compliance')">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script>
+    // Report generation functionality
+    function generateReport() {
+        const reportType = document.getElementById('reportType').value;
+        const timePeriod = document.getElementById('timePeriod').value;
+        
+        // Show loading state
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+        btn.disabled = true;
+        
+        // Simulate report generation
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            alert('Report generated successfully!');
+        }, 2000);
+    }
+
+    function scheduleReport() {
+        alert('Schedule report functionality would open a modal here');
+    }
+
+    function downloadReport(reportId) {
+        alert('Downloading report: ' + reportId);
+    }
+
+    function viewReport(reportId) {
+        alert('Viewing report: ' + reportId);
+    }
+
+    function viewAllReports() {
+        alert('Navigate to all reports page');
+    }
+
+    function addScheduledReport() {
+        alert('Add scheduled report functionality would open a modal here');
+    }
+
+    function editSchedule(scheduleId) {
+        alert('Edit schedule: ' + scheduleId);
+    }
+
+    function deleteSchedule(scheduleId) {
+        if (confirm('Are you sure you want to delete this scheduled report?')) {
+            alert('Schedule deleted: ' + scheduleId);
+        }
+    }
+
+    // Initialize chart
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('reportChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Reports Generated',
+                    data: [12, 19, 8, 15, 22, 9, 14],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
+    </script>
+{% endblock %}

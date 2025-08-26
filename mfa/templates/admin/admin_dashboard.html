@@ -1,0 +1,1106 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Dashboard - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Dashboard{% endblock %}
+{% block admin_content %}
+    <div class="container py-5 admin-dashboard">
+      <div class="row justify-content-center">
+        <div class="col-md-12">
+          <div class="glass-frame hero-unified mb-4 rounded-3">
+            <div class="row align-items-stretch no-gutters">
+              <div class="col-12 d-flex pr-lg-0">
+                <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+                  <div class="hero-body">
+                    <span class="badge badge-pill mb-3">Admin</span>
+                    <h1 class="display-4 mb-3">Security Center</h1>
+                    <p class="text-white-75 mb-0">A quick snapshot of your site's sign-in safety.</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          
+          <div class="row g-3 stats-cards-row mt-3">
+            <div class="col-6 col-md-4">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">Total users</div>
+                  <div class="display-6">{{ stats.total_users }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-4">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">Users Activated</div>
+                  <div class="display-6">{{ users_counts.active|default:0 }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-4">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">Users Deactivated</div>
+                  <div class="display-6">{{ users_counts.inactive|default:0 }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-4">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">MFA enabled (TOTP)</div>
+                  <div class="display-6">{{ stats.users_with_totp }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-4">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">Failed attempts (24h)</div>
+                  <div class="display-6">{{ stats.failed_attempts_24h }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-4">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">Superadmins</div>
+                  <div class="display-6">{{ stats.superusers_count }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-4">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">Successes (24h)</div>
+                  <div class="display-6">{{ stats.successes_24h }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col-6 col-md-4">
+              <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                  <div class="text-muted small">MFA adoption rate</div>
+                  <div class="display-6">{{ stats.mfa_adoption_rate }}%</div>
+                  <div class="progress mt-2" style="height:8px;">
+                    <div class="progress-bar bg-success" role="progressbar" data-progress-width="{{ stats.mfa_adoption_rate }}" aria-valuenow="{{ stats.mfa_adoption_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="card shadow-sm mt-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                  <h5 class="mb-0">
+                    <i class="fas fa-bolt mr-2"></i>Quick Actions
+                  </h5>
+                  <div class="d-flex flex-wrap justify-content-center justify-content-md-right align-items-center mt-2 mt-md-0" style="gap: 0.5rem;">
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshDashboard()">
+                      <i class="fas fa-sync-alt"></i><span class="d-none d-md-inline ml-1">Refresh</span>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="exportReport()">
+                      <i class="fas fa-download"></i><span class="d-none d-md-inline ml-1">Export</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row text-center quick-actions-row">
+                <div class="col-12 col-md-3 mb-3">
+                  <a href="{% url 'mfa:admin_settings' %}" class="text-decoration-none action-card d-block p-3 h-100">
+                    <div class="action-icon bg-success text-white mb-2"><i class="fas fa-shield-alt"></i></div>
+                    <div class="fw-semibold">Security Settings</div>
+                    <div class="small text-muted">Manage MFA options</div>
+                  </a>
+                </div>
+                {% if is_superuser %}
+                <div class="col-12 col-md-3 mb-3">
+                  <a href="{% url 'mfa:admin_users' %}" class="text-decoration-none action-card d-block p-3 h-100">
+                    <div class="action-icon bg-secondary text-white mb-2"><i class="fas fa-users-cog"></i></div>
+                    <div class="fw-semibold">Manage Users</div>
+                    <div class="small text-muted">Superadmin-only access</div>
+                  </a>
+                </div>
+                {% endif %}
+                <div class="col-12 col-md-3 mb-3">
+                  <a href="{% url 'mfa:admin_statistics' %}" class="text-decoration-none action-card d-block p-3 h-100">
+                    <div class="action-icon bg-success text-white mb-2"><i class="fas fa-chart-pie"></i></div>
+                    <div class="fw-semibold">Statistics</div>
+                    <div class="small text-muted">Trends & insights</div>
+                  </a>
+                </div>
+                <div class="col-12 col-md-3 mb-3">
+                  <a href="#logs" class="text-decoration-none action-card d-block p-3 h-100">
+                    <div class="action-icon bg-primary text-white mb-2"><i class="fas fa-list"></i></div>
+                    <div class="fw-semibold">View Logs</div>
+                    <div class="small text-muted">Filter recent events</div>
+                  </a>
+                </div>
+                <div class="col-12 col-md-3 mb-3">
+                  <a href="javascript:void(0)" onclick="window.location.reload()" class="text-decoration-none action-card d-block p-3 h-100">
+                    <div class="action-icon bg-info text-white mb-2"><i class="fas fa-sync"></i></div>
+                    <div class="fw-semibold">Refresh</div>
+                    <div class="small text-muted">Update dashboard</div>
+                  </a>
+                </div>
+                <div class="col-12 col-md-3 mb-3">
+                  <a href="{% url 'mfa:admin_report_settings' %}" class="text-decoration-none action-card d-block p-3 h-100">
+                    <div class="action-icon bg-warning text-white mb-2"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="fw-semibold">Summary Emails</div>
+                    {% if settings.report_enabled %}
+                      <div class="small text-success">Enabled</div>
+                    {% else %}
+                      <div class="small text-muted">Disabled</div>
+                    {% endif %}
+                    <div class="small mt-1" style="line-height:1.2;">
+                      <div class="text-muted">Recipients: {{ report_recipients_count }}</div>
+                      <div class="text-muted">Next: {% if settings.report_next_send_at %}{{ settings.report_next_send_at|date:'Y-m-d H:i' }}{% else %}-{% endif %}</div>
+                      <div class="text-muted">Last: {% if settings.report_last_sent_at %}{{ settings.report_last_sent_at|date:'Y-m-d H:i' }}{% else %}-{% endif %}</div>
+                    </div>
+                  </a>
+                </div>
+                <div class="col-12 col-md-3 mb-3">
+                  <a href="{% url 'mfa:admin_realtime_monitoring' %}" class="text-decoration-none action-card d-block p-3 h-100">
+                    <div class="action-icon bg-danger text-white mb-2"><i class="fas fa-broadcast-tower"></i></div>
+                    <div class="fw-semibold">Live Monitoring</div>
+                    <div class="small text-muted">Real-time alerts</div>
+                    <div class="small mt-1" style="line-height:1.2;">
+                      <div class="text-info"><i class="fas fa-circle pulse-dot"></i> Live Activity Feed</div>
+                      <div class="text-muted">Threat Detection</div>
+                      <div class="text-muted">System Health</div>
+                    </div>
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- User MFA Options -->
+          <div class="card shadow-sm mt-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">User MFA Options</h5>
+                <a class="btn btn-sm btn-outline-success" href="{% url 'mfa:admin_settings' %}">Configure</a>
+              </div>
+              <p class="text-muted small mb-3">Manage which MFA methods are available to users.</p>
+              <div class="d-flex flex-wrap" style="gap:8px;">
+                <span class="badge {% if settings.enable_totp %}bg-success{% else %}bg-secondary{% endif %}">TOTP</span>
+                <span class="badge bg-success">Email OTP</span>
+                <span class="badge {% if settings.enable_passkeys %}bg-success{% else %}bg-secondary{% endif %}">Passkeys</span>
+                <span class="badge {% if settings.enable_sms %}bg-success{% else %}bg-secondary{% endif %}">SMS</span>
+                <span class="badge {% if settings.enable_backup_codes %}bg-success{% else %}bg-secondary{% endif %}">Backup Codes</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Health, Recent Activity, Security Alerts Row -->
+          <div class="row mt-4">
+            <div class="col-md-4">
+              <div class="card shadow-sm rounded-3 h-100">
+                <div class="card-body">
+                  <div class="section-header">
+                    <h5 class="mb-3">
+                      <i class="fas fa-heartbeat mr-2"></i>System Health
+                    </h5>
+                  </div>
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <span class="small">Server Status</span>
+                      <span class="badge bg-success">Online</span>
+                    </div>
+                    <div class="progress" style="height: 4px;">
+                      <div class="progress-bar bg-success" style="width: 100%"></div>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <span class="small">Database</span>
+                      <span class="badge bg-success">Healthy</span>
+                    </div>
+                    <div class="progress" style="height: 4px;">
+                      <div class="progress-bar bg-success" style="width: 95%"></div>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <span class="small">MFA Service</span>
+                      <span class="badge bg-success">Active</span>
+                    </div>
+                    <div class="progress" style="height: 4px;">
+                      <div class="progress-bar bg-success" style="width: 98%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4 col-lg-4">
+              <div class="card shadow-sm rounded-3 h-100">
+                <div class="card-body">
+                  <div class="section-header">
+                    <h5 class="mb-3">
+                      <i class="fas fa-clock mr-2"></i>Recent Activity
+                    </h5>
+                  </div>
+                  <div class="activity-feed">
+                    <div class="activity-item d-flex align-items-start mb-3">
+                      <div class="activity-icon bg-success text-white me-3">
+                        <i class="fas fa-user-plus"></i>
+                      </div>
+                      <div class="flex-grow-1">
+                        <div class="small fw-semibold">New user registered</div>
+                        <div class="text-muted small">john.doe@example.com</div>
+                        <div class="text-muted small">2 minutes ago</div>
+                      </div>
+                    </div>
+                    <div class="activity-item d-flex align-items-start mb-3">
+                      <div class="activity-icon bg-warning text-white me-3">
+                        <i class="fas fa-shield-alt"></i>
+                      </div>
+                      <div class="flex-grow-1">
+                        <div class="small fw-semibold">MFA enabled</div>
+                        <div class="text-muted small">jane.smith@example.com</div>
+                        <div class="text-muted small">5 minutes ago</div>
+                      </div>
+                    </div>
+                    <div class="activity-item d-flex align-items-start mb-3">
+                      <div class="activity-icon bg-info text-white me-3">
+                        <i class="fas fa-sign-in-alt"></i>
+                      </div>
+                      <div class="flex-grow-1">
+                        <div class="small fw-semibold">Successful login</div>
+                        <div class="text-muted small">admin@example.com</div>
+                        <div class="text-muted small">10 minutes ago</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-4 col-lg-4">
+              <div class="card shadow-sm rounded-3 h-100">
+                <div class="card-body">
+                  <div class="section-header">
+                    <h5 class="mb-3">
+                      <i class="fas fa-exclamation-triangle mr-2"></i>Security Alerts
+                    </h5>
+                  </div>
+                  <div class="alert alert-warning alert-sm mb-2">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <small>No critical alerts</small>
+                  </div>
+                  <div class="text-muted small">
+                    Last security scan: 1 hour ago
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Authentication Outcomes Chart -->
+          <div class="card shadow-sm mt-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center flex-wrap">
+                <h5 class="mb-0">7-Day Authentication Outcomes</h5>
+                <span class="d-inline-flex align-items-center mt-2 mt-md-0" style="gap:4px;">
+                  <span class="d-inline-flex align-items-center" style="gap:4px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#ef4444;"></span>
+                    <span class="text-muted small">Failures</span>
+                  </span>
+                  <span class="d-inline-flex align-items-center" style="gap:4px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#22c55e;"></span>
+                    <span class="text-muted small">Successes</span>
+                  </span>
+                </span>
+              </div>
+              <div class="w-100">
+                <div class="d-flex flex-wrap justify-content-between align-items-center w-100 gap-2 mb-2">
+                  <div class="d-flex flex-wrap align-items-center gap-2 mr-auto">
+                    <div id="auth-mode-group" class="btn-group btn-group-sm rounded-pill overflow-hidden" role="group" aria-label="Chart mode">
+                      <button type="button" id="modeCounts" class="btn btn-sm btn-primary active">Counts</button>
+                      <button type="button" id="modePercent" class="btn btn-sm btn-outline-primary">Percent</button>
+                    </div>
+                    <div class="form-switch d-none d-md-flex align-items-center ml-2 toolbar-checkbox">
+                      <input class="form-check-input m-0" type="checkbox" id="toggleBadges" checked>
+                      <label class="form-check-label ml-2" for="toggleBadges">Show numbers</label>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center ml-auto d-none d-md-flex">
+                    <button type="button" class="btn btn-sm btn-outline-secondary downloadChartBtn" style="border-radius:999px;">
+                      <i class="fas fa-download mr-2"></i> Download PNG
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <canvas id="authTrendChart" class="w-100" aria-label="Authentication outcomes timeseries" role="img" style="display:block; width: 100%; height: 180px; max-height: 180px;"></canvas>
+            </div>
+          </div>
+          <div id="recent-users-section" class="card shadow-sm mt-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Recent Users</h5>
+                <div class="d-flex align-items-center recent-users-tools" style="gap:8px;">
+                  <a class="btn btn-sm btn-outline-secondary" href="{% url 'mfa:admin_users' %}">View all</a>
+                </div>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="users-status-filters" role="group" aria-label="User status filters">
+                  <a class="pill {% if not users_status %}active{% endif %}"
+                     href="{% url 'mfa:admin_dashboard' %}?users_page=1{% if page %}&page={{ page }}{% endif %}{% if filters.outcome %}&outcome={{ filters.outcome }}{% endif %}{% if filters.method %}&method={{ filters.method }}{% endif %}{% if filters.event %}&event={{ filters.event }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.ip %}&ip={{ filters.ip }}{% endif %}{% if filters.from %}&from={{ filters.from }}{% endif %}{% if filters.to %}&to={{ filters.to }}{% endif %}{% if users_q %}&users_q={{ users_q|urlencode }}{% endif %}">All <span class="count">{{ users_counts.all|default:0 }}</span></a>
+                  <a class="pill {% if users_status == 'active' %}active{% endif %}"
+                     href="{% url 'mfa:admin_dashboard' %}?users_page=1{% if page %}&page={{ page }}{% endif %}{% if filters.outcome %}&outcome={{ filters.outcome }}{% endif %}{% if filters.method %}&method={{ filters.method }}{% endif %}{% if filters.event %}&event={{ filters.event }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.ip %}&ip={{ filters.ip }}{% endif %}{% if filters.from %}&from={{ filters.from }}{% endif %}{% if filters.to %}&to={{ filters.to }}{% endif %}{% if users_q %}&users_q={{ users_q|urlencode }}{% endif %}&u_status=active">Active <span class="count">{{ users_counts.active|default:0 }}</span></a>
+                  <a class="pill {% if users_status == 'inactive' %}active{% endif %}"
+                     href="{% url 'mfa:admin_dashboard' %}?users_page=1{% if page %}&page={{ page }}{% endif %}{% if filters.outcome %}&outcome={{ filters.outcome }}{% endif %}{% if filters.method %}&method={{ filters.method }}{% endif %}{% if filters.event %}&event={{ filters.event }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.ip %}&ip={{ filters.ip }}{% endif %}{% if filters.from %}&from={{ filters.from }}{% endif %}{% if filters.to %}&to={{ filters.to }}{% endif %}{% if users_q %}&users_q={{ users_q|urlencode }}{% endif %}&u_status=inactive">Inactive <span class="count">{{ users_counts.inactive|default:0 }}</span></a>
+                  <a class="pill {% if users_status == 'staff' %}active{% endif %}"
+                     href="{% url 'mfa:admin_dashboard' %}?users_page=1{% if page %}&page={{ page }}{% endif %}{% if filters.outcome %}&outcome={{ filters.outcome }}{% endif %}{% if filters.method %}&method={{ filters.method }}{% endif %}{% if filters.event %}&event={{ filters.event }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.ip %}&ip={{ filters.ip }}{% endif %}{% if filters.from %}&from={{ filters.from }}{% endif %}{% if filters.to %}&to={{ filters.to }}{% endif %}{% if users_q %}&users_q={{ users_q|urlencode }}{% endif %}&u_status=staff">Staff <span class="count">{{ users_counts.staff|default:0 }}</span></a>
+                  <a class="pill {% if users_status == 'superuser' %}active{% endif %}"
+                     href="{% url 'mfa:admin_dashboard' %}?users_page=1{% if page %}&page={{ page }}{% endif %}{% if filters.outcome %}&outcome={{ filters.outcome }}{% endif %}{% if filters.method %}&method={{ filters.method }}{% endif %}{% if filters.event %}&event={{ filters.event }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.ip %}&ip={{ filters.ip }}{% endif %}{% if filters.from %}&from={{ filters.from }}{% endif %}{% if filters.to %}&to={{ filters.to }}{% endif %}{% if users_q %}&users_q={{ users_q|urlencode }}{% endif %}&u_status=superuser">Superusers <span class="count">{{ users_counts.superuser|default:0 }}</span></a>
+                  <a class="pill {% if users_status == 'totp' %}active{% endif %}"
+                     href="{% url 'mfa:admin_dashboard' %}?users_page=1{% if page %}&page={{ page }}{% endif %}{% if filters.outcome %}&outcome={{ filters.outcome }}{% endif %}{% if filters.method %}&method={{ filters.method }}{% endif %}{% if filters.event %}&event={{ filters.event }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.ip %}&ip={{ filters.ip }}{% endif %}{% if filters.from %}&from={{ filters.from }}{% endif %}{% if filters.to %}&to={{ filters.to }}{% endif %}{% if users_q %}&users_q={{ users_q|urlencode }}{% endif %}&u_status=totp">TOTP <span class="count">{{ users_counts.totp|default:0 }}</span></a>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>Email</th>
+                      <th>Date joined</th>
+                      <th>Status</th>
+                      <th>MFA (TOTP)</th>
+                      <th class="text-center actions-col">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for u in users %}
+                      <tr>
+                        <td><a href="{% url 'mfa:admin_user_detail' u.id %}" class="user-link">{{ u.username }}</a>{% if u.is_superuser %} <span class="badge bg-danger">superuser</span>{% elif u.is_staff %} <span class="badge bg-secondary">staff</span>{% endif %}</td>
+                        <td>{{ u.email }}</td>
+                        <td>{{ u.date_joined|date:'Y-m-d H:i' }}</td>
+                        <td>
+                          {% if u.is_active %}
+                            <span class="badge bg-success">Active</span>
+                          {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                          {% endif %}
+                        </td>
+                        <td>
+                          {% if u.has_totp %}
+                            <span class="badge bg-success">Yes</span>
+                          {% else %}
+                            <span class="badge bg-secondary">No</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-center actions-col">
+                          <div class="btn-group btn-group-sm" role="group" aria-label="User quick actions">
+                            {% if u.is_active %}
+                              <button type="button" class="btn btn-outline-warning js-inline-action" data-toggle="tooltip" title="Deactivate" aria-label="Deactivate" data-url="{% url 'mfa:admin_deactivate_user' u.id %}"><i class="fas fa-user-slash"></i></button>
+                            {% else %}
+                              <button type="button" class="btn btn-outline-success js-inline-action" data-toggle="tooltip" title="Activate" aria-label="Activate" data-url="{% url 'mfa:admin_activate_user' u.id %}"><i class="fas fa-user-check"></i></button>
+                            {% endif %}
+                            <a class="btn btn-outline-secondary" data-toggle="tooltip" title="Manage" aria-label="Manage" href="{% url 'mfa:admin_user_detail' u.id %}"><i class="fas fa-cog"></i></a>
+                          </div>
+                        </td>
+                      </tr>
+                    {% empty %}
+                      <tr><td colspan="6" class="text-muted">No users to show.</td></tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              <div class="d-flex justify-content-center align-items-center mt-2 pager-controls">
+                {% if has_newer_users %}
+                  <a class="btn btn-sm pager-btn mr-2" title="Newer" aria-label="Newer users" href="{% url 'mfa:admin_dashboard' %}?users_page={{ users_page|add:'-1' }}{% if page %}&page={{ page }}{% endif %}{% if filters.outcome %}&outcome={{ filters.outcome }}{% endif %}{% if filters.method %}&method={{ filters.method }}{% endif %}{% if filters.event %}&event={{ filters.event }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.ip %}&ip={{ filters.ip }}{% endif %}{% if filters.from %}&from={{ filters.from }}{% endif %}{% if filters.to %}&to={{ filters.to }}{% endif %}{% if users_status %}&u_status={{ users_status }}{% endif %}{% if users_q %}&users_q={{ users_q|urlencode }}{% endif %}"><i class="fas fa-chevron-left"></i></a>
+                {% endif %}
+                <div class="text-muted small mx-2">Page {{ users_page }} of {{ users_total_pages }}</div>
+                {% if has_older_users %}
+                  <a class="btn btn-sm pager-btn ml-2" title="Older" aria-label="Older users" href="{% url 'mfa:admin_dashboard' %}?users_page={{ users_page|add:'1' }}{% if page %}&page={{ page }}{% endif %}{% if filters.outcome %}&outcome={{ filters.outcome }}{% endif %}{% if filters.method %}&method={{ filters.method }}{% endif %}{% if filters.event %}&event={{ filters.event }}{% endif %}{% if filters.user %}&user={{ filters.user }}{% endif %}{% if filters.ip %}&ip={{ filters.ip }}{% endif %}{% if filters.from %}&from={{ filters.from }}{% endif %}{% if filters.to %}&to={{ filters.to }}{% endif %}{% if users_status %}&u_status={{ users_status }}{% endif %}{% if users_q %}&users_q={{ users_q|urlencode }}{% endif %}"><i class="fas fa-chevron-right"></i></a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <div id="logs" class="card shadow-sm mt-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Logs</h5>
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'mfa:admin_logs' %}">View all logs</a>
+              </div>
+              <div class="mb-2">
+                <div class="table-responsive">
+                  <table class="table table-sm table-hover align-middle mb-0">
+                    <thead>
+                      <tr class="text-muted">
+                        <th style="width: 160px;">When</th>
+                        <th>User</th>
+                        <th>Event</th>
+                        <th>Method</th>
+                        <th>Outcome</th>
+                        <th style="width: 140px;">IP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for log in logs|slice:":8" %}
+                        <tr class="small">
+                          <td class="when">{{ log.created_at|date:'Y-m-d H:i' }}</td>
+                          <td>
+                            {% if log.user %}
+                              <a href="{% url 'mfa:admin_user_detail' log.user.id %}" class="text-decoration-none username">{{ log.user.username }}</a>
+                              {% if log.user.is_superuser %}
+                                <span class="badge bg-danger">superuser</span>
+                              {% elif log.user.is_staff %}
+                                <span class="badge bg-secondary">staff</span>
+                              {% endif %}
+                            {% else %}
+                              <span class="text-muted">-</span>
+                            {% endif %}
+                          </td>
+                          <td><span class="badge badge-soft">{{ log.get_event_display|default:log.event }}</span></td>
+                          <td>{{ log.method_display|default:'-' }}</td>
+                          <td>
+                            {% if log.outcome == 'success' %}
+                              <span class="badge bg-success">Success</span>
+                            {% elif log.outcome == 'failure' %}
+                              <span class="badge bg-danger">Failure</span>
+                            {% else %}
+                              <span class="badge bg-secondary">Other</span>
+                            {% endif %}
+                          </td>
+                          <td class="ip">{{ log.ip_address|default:'-' }}</td>
+                        </tr>
+                      {% empty %}
+                        <tr class="small"><td colspan="6" class="text-muted">No recent log entries.</td></tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" role="dialog" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="deleteUserModalLabel">Confirm Delete</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <div class="modal-body">
+            <p>To delete <strong id="deleteUsername">this user</strong>, type <strong>DELETE</strong> in the box below. This action cannot be undone.</p>
+            <input type="text" class="form-control" id="deleteConfirmText" placeholder="DELETE" style="text-transform: uppercase;" autocomplete="off" oninput="(function(inp){var v=(inp.value||'').toUpperCase(); if (inp.value!==v) inp.value=v; var btn=document.getElementById('confirmDeleteBtn'); if(btn){ if(v.trim()==='DELETE'){ btn.removeAttribute('disabled'); btn.classList.remove('disabled'); btn.setAttribute('aria-disabled','false'); } else { btn.setAttribute('disabled','disabled'); btn.classList.add('disabled'); btn.setAttribute('aria-disabled','true'); } } })(this)">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmDeleteBtn" style="border-radius: .25rem;" disabled>Confirm Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="resetMfaModal" tabindex="-1" role="dialog" aria-labelledby="resetMfaModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="resetMfaModalLabel">Confirm Reset MFA</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <div class="modal-body">
+            <p>To reset MFA for <strong id="resetMfaUsername">this user</strong>, type <strong>RESET</strong> in the box below.</p>
+            <input type="text" class="form-control" id="resetMfaConfirmText" placeholder="RESET" style="text-transform: uppercase;" autocomplete="off" oninput="(function(inp){var v=(inp.value||'').toUpperCase(); if (inp.value!==v) inp.value=v; var btn=document.getElementById('confirmResetMfaBtn'); if(btn){ if(v.trim()==='RESET'){ btn.removeAttribute('disabled'); btn.classList.remove('disabled'); btn.setAttribute('aria-disabled','false'); } else { btn.setAttribute('disabled','disabled'); btn.classList.add('disabled'); btn.setAttribute('aria-disabled','true'); } } })(this)">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmResetMfaBtn" style="border-radius: .25rem;" disabled>Confirm Reset MFA</button>
+          </div>
+        </div>
+      </div>
+    </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function(){
+  function getCookie(name){ var m=document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)'); return m?m.pop():''; }
+  function post(url){ return fetch(url,{method:'POST', headers:{'X-CSRFToken': getCookie('csrftoken')}}).then(r=>r.json()); }
+  // Minimal inline actions (activate/deactivate only)
+  document.querySelectorAll('.js-inline-action').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var url = this.getAttribute('data-url');
+      btn.setAttribute('disabled','disabled');
+      post(url).then(function(d){ if(d && d.success){ location.reload(); } else { alert((d && d.error) || 'Action failed'); btn.removeAttribute('disabled'); } })
+               .catch(function(){ alert('Request failed'); btn.removeAttribute('disabled'); });
+    });
+  });
+  // Enable tooltips
+  $(function(){ $('[data-toggle="tooltip"]').tooltip(); });
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+{{ chart_labels|json_script:"chart-labels" }}
+{{ chart_failures|json_script:"chart-failures" }}
+{{ chart_successes|json_script:"chart-successes" }}
+<script>
+  $(function() {
+    try {
+      $('.progress-bar[data-progress-width]').each(function(){
+        var v = parseFloat($(this).attr('data-progress-width')) || 0;
+        if (v < 0) v = 0; if (v > 100) v = 100;
+        $(this).css('width', v + '%');
+      });
+    } catch(e) { }
+    var targetDeleteForm = null;
+    var $modal = $('#deleteUserModal');
+    var $input = $('#deleteConfirmText');
+    var $btn = $('#confirmDeleteBtn');
+    var $nameSpan = $('#deleteUsername');
+    try {
+      var $filterForm = $('#logsFilterForm');
+      if ($filterForm && $filterForm.length) {
+        $filterForm.attr('novalidate', 'novalidate')[0].noValidate = true;
+        $filterForm.find('input, select, textarea').each(function(){
+          this.removeAttribute('required');
+          this.oninvalid = function(e){ e.preventDefault(); this.setCustomValidity(''); };
+          this.oninput = function(){ this.setCustomValidity(''); };
+        });
+        function applyLogFilters(){
+          try { $filterForm[0].noValidate = true; } catch(e) {}
+          var params = [];
+          params.push({name: 'page', value: '1'});
+          var up = $('input[name="users_page"]', $filterForm).val();
+          if (up) { params.push({name: 'users_page', value: up}); }
+          var fields = ['outcome','method','event','user','ip','from','to'];
+          fields.forEach(function(n){
+            var v = ($('[name="'+n+'"]', $filterForm).val() || '').trim();
+            if (v) { params.push({name: n, value: v}); }
+          });
+          var qs = $.param(params);
+          window.location = "{% url 'mfa:admin_dashboard' %}" + (qs ? ('?' + qs) : '');
+        }
+        $filterForm.on('submit', function(ev){ ev.preventDefault(); applyLogFilters(); });
+        $('#applyLogsFilters').on('click', function(){ applyLogFilters(); });
+        $filterForm.on('keydown', 'input, select, textarea', function(e){
+          if (e.key === 'Enter') { e.preventDefault(); applyLogFilters(); }
+        });
+      }
+    } catch(e) { }
+    var reevaluateTimer = null;
+    $modal.on('show.bs.modal', function (event) {
+      var $trigger = $(event.relatedTarget);
+      var $form = $trigger.closest('form.delete-user-form');
+      targetDeleteForm = $form && $form.length ? $form : null;
+      var username = ($trigger.data('username')) || ($form && $form.data('username')) || 'this user';
+      $nameSpan.text(username);
+      $input.val('');
+      setConfirmEnabled(false);
+      setTimeout(function(){ $input.trigger('focus'); }, 150);
+      setTimeout(function(){ $input.trigger('input'); }, 10);
+      if (reevaluateTimer) { clearInterval(reevaluateTimer); }
+      reevaluateTimer = setInterval(function(){
+        if ($modal.is(':visible')) { reevaluateConfirm(); }
+      }, 200);
+    });
+    function setConfirmEnabled(enabled){
+      if (enabled){
+        $btn.prop('disabled', false);
+        $btn.removeAttr('disabled');
+        $btn.removeClass('disabled');
+        $btn.attr('aria-disabled', 'false');
+      } else {
+        $btn.prop('disabled', true);
+        $btn.attr('disabled', 'disabled');
+        $btn.addClass('disabled');
+        $btn.attr('aria-disabled', 'true');
+      }
+    }
+    function reevaluateConfirm(){
+      var currentVal = $input.val() || '';
+      currentVal = currentVal.toUpperCase();
+      $input.val(currentVal);
+      setConfirmEnabled(currentVal.trim() === 'DELETE');
+    }
+    $input.on('input keyup change', reevaluateConfirm);
+    $input.on('keydown', function(e){
+      if (e.key === 'Enter' && !$btn.prop('disabled')) {
+        e.preventDefault();
+        $btn.click();
+      }
+    });
+    $btn.on('click', function() {
+      if (targetDeleteForm) {
+        targetDeleteForm.trigger('submit');
+      }
+    });
+    $modal.on('hidden.bs.modal', function() {
+      $input.val('');
+      setConfirmEnabled(false);
+      targetDeleteForm = null;
+      $nameSpan.text('this user');
+      if (reevaluateTimer) { clearInterval(reevaluateTimer); reevaluateTimer = null; }
+    });
+    try {
+      var choicesSelectors = ['select[name="outcome"]','select[name="method"]','select[name="event"]'];
+      choicesSelectors.forEach(function(sel){
+        var el = document.querySelector('#logsFilterForm ' + sel);
+        if (!el) return;
+        if (el._choices) return;
+        el._choices = new Choices(el, {
+          searchEnabled: true,
+          shouldSort: false,
+          itemSelectText: '',
+          position: 'auto',
+          removeItemButton: false,
+          placeholder: true,
+          classNames: { containerOuter: 'choices choices-sm' }
+        });
+      });
+    } catch(e) { }
+    try {
+      var ctx = document.getElementById('authTrendChart');
+      if (ctx && window.Chart) {
+        var labels = JSON.parse(document.getElementById('chart-labels').textContent || '[]');
+        var failures = JSON.parse(document.getElementById('chart-failures').textContent || '[]');
+        var successes = JSON.parse(document.getElementById('chart-successes').textContent || '[]');
+        if (!Array.isArray(labels)) labels = [];
+        if (!Array.isArray(failures)) failures = [];
+        if (!Array.isArray(successes)) successes = [];
+        if (window.ChartDataLabels) { Chart.register(ChartDataLabels); }
+        var mode = 'counts';
+        var showLabels = false;
+        var showBadges = true;
+        var chart = null;
+        function computePercentages() {
+          var fP = [];
+          var sP = [];
+          for (var i=0; i<labels.length; i++){
+            var f = Number(failures[i] || 0);
+            var s = Number(successes[i] || 0);
+            var total = f + s;
+            if (total === 0){ fP.push(0); sP.push(0); }
+            else {
+              var fp = Math.round((f / total) * 100);
+              var sp = Math.max(0, 100 - fp);
+              fP.push(fp); sP.push(sp);
+            }
+          }
+          return { fP: fP, sP: sP };
+        }
+        function buildChart(){
+          try {
+            console.debug('[MFA Chart] labels=', labels, 'failures=', failures, 'successes=', successes);
+            if (labels.length !== failures.length || labels.length !== successes.length){
+              console.warn('[MFA Chart] Array length mismatch', {labels: labels.length, failures: failures.length, successes: successes.length});
+            }
+          } catch(e) { }
+          try {
+            if (labels.length === 0) {
+              var ph = document.createElement('div');
+              ph.className = 'text-muted small mt-2';
+              ph.textContent = 'No data available for the last 7 days.';
+              if (ctx && ctx.parentNode) {
+                var existing = ctx.parentNode.querySelector('.no-data-placeholder');
+                if (!existing) {
+                  ph.classList.add('no-data-placeholder');
+                  ctx.parentNode.appendChild(ph);
+                }
+              }
+              return; 
+            }
+          } catch(e) {}
+          if (chart) { chart.destroy(); }
+          var datasets, yTitle, yMax = undefined, yTicks = { precision: 0 };
+          if (mode === 'percent'){
+            var p = computePercentages();
+            datasets = [
+              { label: 'Failures', data: p.fP, backgroundColor: 'rgba(239,68,68,0.8)', borderColor: '#ef4444', borderWidth: 0, borderSkipped: false, borderRadius: 0, stack: 'auth' },
+              { label: 'Successes', data: p.sP, backgroundColor: 'rgba(34,197,94,0.82)', borderColor: '#22c55e', borderWidth: 0, borderSkipped: 'bottom', borderRadius: {topLeft: 8, topRight: 8, bottomLeft: 0, bottomRight: 0}, stack: 'auth' }
+            ];
+            yTitle = '% of daily events';
+            yMax = 100;
+            yTicks = { callback: function(v){ return v + '%'; }, stepSize: 20 };
+          } else {
+            datasets = [
+              { label: 'Failures', data: failures, backgroundColor: 'rgba(239,68,68,0.8)', borderColor: '#ef4444', borderWidth: 0, borderSkipped: false, borderRadius: 0, stack: 'auth' },
+              { label: 'Successes', data: successes, backgroundColor: 'rgba(34,197,94,0.82)', borderColor: '#22c55e', borderWidth: 0, borderSkipped: 'bottom', borderRadius: {topLeft: 8, topRight: 8, bottomLeft: 0, bottomRight: 0}, stack: 'auth' }
+            ];
+            yTitle = 'Events';
+          }
+          const tickBadges = {
+            id: 'tickBadges',
+            afterDraw(chart, args, opts){
+              const {ctx, chartArea, scales} = chart;
+              const x = scales.x; if (!x) return;
+              if (!showBadges) return;
+              const radius = opts.radius || 11;
+              const gap = opts.gap || 6;
+              const fontSize = opts.fontSize || 10;
+              const fontWeight = opts.fontWeight || '600';
+              const colorSuccess = opts.successColor || '#22c55e';
+              const colorFailure = opts.failureColor || '#ef4444';
+              const textColor = '#ffffff';
+              ctx.save();
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.font = `${fontWeight} ${fontSize}px sans-serif`;
+              for (let i = 0; i < labels.length; i++){
+                const cx = x.getPixelForValue(i);
+                const s = Number(successes[i] || 0);
+                const f = Number(failures[i] || 0);
+                const total = s + f;
+                const sTxt = (typeof mode !== 'undefined' && mode === 'percent')
+                  ? (total ? Math.round((s/total)*100) + '%' : '0%')
+                  : String(s);
+                const fTxt = (typeof mode !== 'undefined' && mode === 'percent')
+                  ? (total ? (100 - Math.round((s/total)*100)) + '%' : '0%')
+                  : String(f);
+                const desiredY = (x && typeof x.bottom === 'number') ? (x.bottom + radius + 16) : (chartArea.bottom + radius + 16);
+                const canvasBottom = (typeof chart.bottom === 'number') ? chart.bottom : (chartArea.bottom + 60);
+                const baseY = Math.min(canvasBottom - 2, desiredY);
+                const leftX = cx - (radius + gap/2);
+                const rightX = cx + (radius + gap/2);
+                ctx.beginPath(); ctx.fillStyle = colorSuccess;
+                ctx.arc(leftX, baseY, radius, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = textColor; ctx.fillText(sTxt, leftX, baseY + 2);
+                ctx.beginPath(); ctx.fillStyle = colorFailure;
+                ctx.arc(rightX, baseY, radius, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = textColor; ctx.fillText(fTxt, rightX, baseY + 2);
+              }
+              ctx.restore();
+            }
+          };
+          chart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: labels, datasets: datasets },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              layout: { padding: { bottom: 60 } },
+              scales: {
+                x: { stacked: true, grid: { display: false }, ticks: { padding: 8 } },
+                y: {
+                  stacked: true,
+                  beginAtZero: true,
+                  max: yMax,
+                  title: { display: true, text: yTitle }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                tickBadges: { enabled: showBadges, radius: 11, gap: 6, fontSize: 10 },
+                tooltip: {
+                  enabled: true,
+                  callbacks: {
+                    label: function(ctx){
+                      var label = ctx.dataset.label || '';
+                      var v = ctx.parsed.y;
+                      if (mode==='percent'){ return label + ': ' + v + '%'; }
+                      return label + ': ' + v.toLocaleString();
+                    },
+                    footer: function(context){
+                      if (!context || !context.length) return '';
+                      var idx = context[0].dataIndex;
+                      var rawF = failures[idx] || 0;
+                      var rawS = successes[idx] || 0;
+                      var rawTotal = rawF + rawS;
+                      return mode === 'percent' ? ('Total: 100% ('+ rawTotal +' events)') : ('Total: ' + rawTotal);
+                    }
+                  }
+                },
+                datalabels: {
+                  display: function(ctx){
+                    if (!showLabels) return false;
+                    var idx = ctx.dataIndex;
+                    var v = Number(ctx.dataset.data[idx] || 0);
+                    if (v <= 0) return false;
+                    try {
+                      var w = size && size.width ? size.width : (chart.width || 0);
+                      var isSmall = w > 0 && w < 420;
+                      chart.options.layout.padding.bottom = isSmall ? 76 : 60;
+                      var xTicks = chart.options.scales && chart.options.scales.x && chart.options.scales.x.ticks ? chart.options.scales.x.ticks : null;
+                      if (xTicks){
+                        xTicks.maxRotation = isSmall ? 60 : 0;
+                        xTicks.minRotation = isSmall ? 40 : 0;
+                        xTicks.autoSkip = true;
+                        xTicks.autoSkipPadding = isSmall ? 4 : 8;
+                      }
+                      if (chart.options.plugins && chart.options.plugins.tickBadges){
+                        chart.options.plugins.tickBadges.radius = isSmall ? 10 : 11;
+                        chart.options.plugins.tickBadges.gap = isSmall ? 4 : 6;
+                        chart.options.plugins.tickBadges.fontSize = isSmall ? 9 : 10;
+                      }
+                    } catch(e) {}
+                    try {
+                      var y = ctx.chart.scales['y'];
+                      var pxPerUnit = Math.abs(y.getPixelForValue(1) - y.getPixelForValue(0));
+                      var segmentPx = v * pxPerUnit;
+                      return segmentPx >= 12;
+                    } catch(e) {
+                      return v >= 2;
+                    }
+                  },
+                  color: '#ffffff',
+                  anchor: 'center',
+                  align: 'center',
+                  offset: 0,
+                  clamp: true,
+                  clip: true,
+                  padding: {top: 0, bottom: 0, left: 0, right: 0},
+                  formatter: function(value, ctx){
+                    if (mode === 'percent') {
+                      return (Number(value || 0)).toFixed(0) + '%';
+                    }
+                    return Number(value || 0).toLocaleString(undefined);
+                  },
+                  backgroundColor: null,
+                  borderRadius: 0,
+                  font: { weight: '600', size: 10 }
+                }
+              }
+            },
+            plugins: [tickBadges]
+          });
+        }
+        (function(){
+          var t = document.getElementById('toggleBadges');
+          if (t) { showBadges = !!t.checked && window.matchMedia('(min-width: 768px)').matches; }
+        })();
+        buildChart();
+        if (labels && labels.length && chart) { setMode(mode); }
+        function setMode(newMode){
+          mode = newMode;
+          if (!chart) { return; }
+          var countsBtn = document.getElementById('modeCounts');
+          var percentBtn = document.getElementById('modePercent');
+          if (countsBtn && percentBtn){
+            countsBtn.classList.toggle('active', mode==='counts');
+            percentBtn.classList.toggle('active', mode==='percent');
+            countsBtn.classList.toggle('btn-primary', mode==='counts');
+            countsBtn.classList.toggle('btn-outline-primary', mode!=='counts');
+            percentBtn.classList.toggle('btn-primary', mode==='percent');
+            percentBtn.classList.toggle('btn-outline-primary', mode!=='percent');
+          }
+          chart.options.scales.y.title.text = (mode==='percent') ? 'Percent' : 'Events';
+          chart.options.scales.y.max = (mode==='percent') ? 100 : undefined;
+          chart.options.plugins.tooltip.callbacks.label = function(ctx){
+            var label = ctx.dataset.label || '';
+            var v = ctx.parsed.y;
+            if (mode==='percent'){ return `${label}: ${v}%`; }
+            return `${label}: ${v.toLocaleString()}`;
+          };
+          buildChart();
+        }
+        var countsBtn = document.getElementById('modeCounts');
+        var percentBtn = document.getElementById('modePercent');
+        if (countsBtn) countsBtn.addEventListener('click', function(){ setMode('counts'); });
+        if (percentBtn) percentBtn.addEventListener('click', function(){ setMode('percent'); });
+        var toggleBadgesEl = document.getElementById('toggleBadges');
+        function handleBadgeToggle(checked) {
+          var desktop = window.matchMedia('(min-width: 768px)').matches;
+          var enabled = !!checked && desktop;
+          showBadges = enabled;
+          if (chart) {
+            if (!chart.options.plugins) chart.options.plugins = {};
+            if (!chart.options.plugins.tickBadges) chart.options.plugins.tickBadges = {};
+            chart.options.plugins.tickBadges.enabled = enabled;
+            chart.update('none');
+          }
+        }
+
+        if (toggleBadgesEl) {
+          toggleBadgesEl.addEventListener('change', function() {
+            handleBadgeToggle(this.checked);
+          });
+        }
+        window.addEventListener('resize', function(){
+          handleBadgeToggle(toggleBadgesEl ? toggleBadgesEl.checked : false);
+        });
+        var dlBtns = document.querySelectorAll('.downloadChartBtn');
+        if (dlBtns && dlBtns.length) {
+          dlBtns.forEach(function(btn){
+            btn.addEventListener('click', function(){
+              try {
+                var link = document.createElement('a');
+                link.download = 'authentication_outcomes.png';
+                link.href = chart.toBase64Image();
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              } catch(e) { }
+            });
+          });
+        }
+      }
+    } catch(e) { }
+    // Recent Users: AJAX filters/pager without full refresh
+    try {
+      function bindRecentUsersActions() {
+        var section = document.getElementById('recent-users-section');
+        if (!section) return;
+        // Make quick search non-required on dashboard
+        try {
+          var form = section.querySelector('form[role="search"]');
+          if (form) {
+            form.setAttribute('novalidate', '');
+            form.noValidate = true;
+            var input = form.querySelector('input[name="users_q"]');
+            if (input) {
+              input.removeAttribute('required');
+              // Clear any residual validity state
+              try { input.setCustomValidity(''); } catch(e) {}
+              input.addEventListener('invalid', function(ev){ ev.preventDefault(); }, false);
+              // Enter key should behave like clicking Search button
+              input.addEventListener('keydown', function(ev){
+                if (ev.key === 'Enter') {
+                  ev.preventDefault();
+                  var btn = form.querySelector('.js-quick-search-btn');
+                  if (btn) btn.click();
+                }
+              });
+            }
+            // Prevent default submit and handle via JS
+            // Also suppress any native invalid events bubbled from children
+            form.addEventListener('invalid', function(ev){ ev.preventDefault(); }, true);
+            form.addEventListener('submit', function(ev){
+              ev.preventDefault();
+              var q = (input && input.value || '').trim();
+              if (!q) { input && input.focus(); return; }
+              var base = form.getAttribute('action') || window.location.pathname;
+              var cur = new URL(window.location.href);
+              var url = new URL(base, window.location.origin);
+              // Preserve existing non-user filters
+              cur.searchParams.forEach(function(v,k){
+                if (k !== 'users_page' && k !== 'users_q') {
+                  url.searchParams.append(k, v);
+                }
+              });
+              url.searchParams.set('users_page', '1');
+              url.searchParams.set('users_q', q);
+              loadRecentUsers(url.toString(), true);
+            }, { once: false });
+            // Button click handler
+            var btn = form.querySelector('.js-quick-search-btn');
+            if (btn) {
+              btn.addEventListener('click', function(){
+                var q = (input && input.value || '').trim();
+                if (!q) { input && input.focus(); return; }
+                var base = form.getAttribute('action') || window.location.pathname;
+                var cur = new URL(window.location.href);
+                var url = new URL(base, window.location.origin);
+                cur.searchParams.forEach(function(v,k){
+                  if (k !== 'users_page' && k !== 'users_q') {
+                    url.searchParams.append(k, v);
+                  }
+                });
+                url.searchParams.set('users_page', '1');
+                url.searchParams.set('users_q', q);
+                loadRecentUsers(url.toString(), true);
+              });
+            }
+          }
+        } catch(e) { }
+        // Tooltips within section
+        $(section).find('[data-toggle="tooltip"]').tooltip();
+        // Inline activate/deactivate actions
+        $(section).find('.js-inline-action').off('click').on('click', function(e){
+          e.preventDefault();
+          var $btn = $(this);
+          var url = $btn.attr('data-url');
+          if (!url) return;
+          $btn.prop('disabled', true);
+          fetch(url, { method: 'POST', headers: { 'X-CSRFToken': (document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)')||[]).pop() || '' } })
+            .then(function(r){ return r.json(); })
+            .then(function(json){ if (json && json.success) { loadRecentUsers(window.location.href, false); } else { alert((json && json.error) || 'Action failed'); $btn.prop('disabled', false); } })
+            .catch(function(){ alert('Request failed'); $btn.prop('disabled', false); });
+        });
+      }
+      function loadRecentUsers(url, push){
+        if (typeof push === 'undefined') push = true;
+        fetch(url, { credentials: 'same-origin' })
+          .then(function(r){ return r.text(); })
+          .then(function(html){
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+            var newSection = doc.getElementById('recent-users-section');
+            var current = document.getElementById('recent-users-section');
+            if (newSection && current) {
+              current.replaceWith(newSection);
+              bindRecentUsersActions();
+              if (push) { history.pushState({ recentUsersUrl: url }, '', url); }
+            }
+          })
+          .catch(function(){ /* silently fail */ });
+      }
+      // Intercept clicks on filter chips and pager inside the section
+      document.addEventListener('click', function(e){
+        var a = e.target.closest('#recent-users-section a');
+        if (!a) return;
+        var href = a.getAttribute('href') || '';
+        // Only intercept dashboard-internal links (filters/pagers)
+        var isSamePage = href.indexOf('#') !== 0 && href.indexOf('javascript:') !== 0 && href.indexOf('admin_users') === -1;
+        if (!isSamePage) return; // let external (e.g., Manage page) proceed
+        // Heuristic: links that carry users_page or u_status params
+        if (href.indexOf('users_page=') !== -1 || href.indexOf('u_status=') !== -1 || href.indexOf('users_q=') !== -1) {
+          e.preventDefault();
+          loadRecentUsers(a.href, true);
+        }
+      }, true);
+      // Re-bind on first load
+      bindRecentUsersActions();
+      // Back/forward support
+      window.addEventListener('popstate', function(ev){
+        if (ev && ev.state && ev.state.recentUsersUrl) {
+          loadRecentUsers(ev.state.recentUsersUrl, false);
+        }
+      });
+    } catch(e) { }
+  });
+</script>
+{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <style>
+    .action-card {
+      border: 1px solid #e9ecef;
+      border-radius: .5rem;
+      transition: all .15s ease-in-out;
+      background-color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      min-height: 168px;
+    }
+    .action-card:hover { transform: translateY(-2px); box-shadow: 0 .25rem .75rem rgba(0,0,0,.05); border-color: #dfe3e6; }
+    .action-icon { width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; }
+    .timeline-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-top: .35rem; }
+    .pager-btn { border: 1px solid #e0e6eb; }
+    
+    .activity-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 14px;
+    }
+
+    .activity-feed .activity-item:last-child {
+      margin-bottom: 0 !important;
+    }
+
+    .alert-sm {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block title %}Roles & Permissions{% endblock %}
+{% block admin_page_name %}Roles{% endblock %}
+{% block admin_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Admin</span>
+                <h1 class="display-5 mb-2">Roles & Permissions</h1>
+                <p class="text-white-75 mb-0">Manage roles (groups) and their permissions.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="section-header section-header-on-green d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0 text-white">Roles</h5>
+            <div>
+              <div class="input-group input-group-sm" style="width: 260px;">
+                <input id="newRoleName" type="text" class="form-control" placeholder="New role name">
+                <button id="createRoleBtn" class="btn btn-dark">Create</button>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-4">
+              <ul id="rolesList" class="list-group small"></ul>
+            </div>
+            <div class="col-md-8">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Permissions</h6>
+                <button id="savePermsBtn" class="btn btn-primary btn-sm" disabled>Save Changes</button>
+              </div>
+              <div id="permsPane" class="border rounded p-2" style="max-height: 420px; overflow:auto;">
+                {% for p in permissions %}
+                  <div class="form-check form-check-sm">
+                    <input class="form-check-input perm-checkbox" type="checkbox" value="{{ p.id }}" id="perm{{ p.id }}">
+                    <label class="form-check-label" for="perm{{ p.id }}">{{ p.content_type.app_label }} | {{ p.codename }}</label>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<style>
+  .section-header-on-green{background:linear-gradient(135deg, rgba(118,185,87,.98) 0%, rgba(63,111,44,.98) 100%); color:#fff; margin:-1.25rem -1.25rem 0 -1.25rem; padding:1.25rem 1.5rem; border-radius:.375rem .375rem 0 0;}
+  .list-group-item.active{ background: var(--brand-color,#55833d); border-color: var(--brand-color,#55833d); }
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function(){
+  function getCookie(name){ const m=document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)'); return m?m.pop():''; }
+  const rolesList = document.getElementById('rolesList');
+  const saveBtn = document.getElementById('savePermsBtn');
+  const createBtn = document.getElementById('createRoleBtn');
+  const newRoleName = document.getElementById('newRoleName');
+  let activeRole = null; // {id, name, perm_ids}
+
+  function loadRoles(selectId){
+    fetch('{% url "mfa:admin_roles_list" %}?include_perms=1')
+      .then(r=>r.json()).then(data=>{
+        rolesList.innerHTML='';
+        (data.roles||[]).forEach(function(r){
+          const li = document.createElement('li');
+          li.className = 'list-group-item d-flex justify-content-between align-items-center';
+          li.innerHTML = '<span>'+r.name+'</span>'+
+            '<span><button class="btn btn-sm btn-outline-primary me-1 js-select-role" data-id="'+r.id+'">Edit</button>'+
+            '<button class="btn btn-sm btn-outline-danger js-del-role" data-id="'+r.id+'">Delete</button></span>';
+          rolesList.appendChild(li);
+        });
+        if (selectId){
+          const btn = rolesList.querySelector('.js-select-role[data-id="'+selectId+'"]');
+          if (btn){ btn.click(); }
+        }
+      });
+  }
+
+  rolesList.addEventListener('click', function(e){
+    const sel = e.target.closest('.js-select-role');
+    if (sel){
+      const id = parseInt(sel.getAttribute('data-id'),10);
+      fetch('{% url "mfa:admin_roles_list" %}?include_perms=1').then(r=>r.json()).then(data=>{
+        const role = (data.roles||[]).find(x=>x.id===id);
+        if (!role) return;
+        activeRole = role;
+        document.querySelectorAll('.perm-checkbox').forEach(cb=>{ cb.checked = role.perm_ids.indexOf(parseInt(cb.value,10))>-1; });
+        saveBtn.disabled = false;
+        rolesList.querySelectorAll('.list-group-item').forEach(li=>li.classList.remove('active'));
+        e.target.closest('.list-group-item').classList.add('active');
+      });
+      return;
+    }
+    const del = e.target.closest('.js-del-role');
+    if (del){
+      const id = parseInt(del.getAttribute('data-id'),10);
+      if (!confirm('Delete this role?')) return;
+      fetch('{% url "mfa:admin_roles_delete" %}', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify({id:id})})
+        .then(r=>r.json()).then(data=>{ if(data.success){ loadRoles(); if(activeRole && activeRole.id===id){ activeRole=null; saveBtn.disabled=true; document.querySelectorAll('.perm-checkbox').forEach(cb=>cb.checked=false);} } else { alert(data.error||'Failed'); } });
+    }
+  });
+
+  saveBtn.addEventListener('click', function(){
+    if (!activeRole) return;
+    const perm_ids = Array.from(document.querySelectorAll('.perm-checkbox:checked')).map(cb=>parseInt(cb.value,10));
+    fetch('{% url "mfa:admin_roles_update_perms" %}', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify({id: activeRole.id, perm_ids: perm_ids})})
+      .then(r=>r.json()).then(data=>{ if(data.success){ alert('Permissions updated'); } else { alert(data.error||'Failed'); } });
+  });
+
+  createBtn.addEventListener('click', function(){
+    const name = (newRoleName.value||'').trim();
+    if (!name) { newRoleName.focus(); return; }
+    fetch('{% url "mfa:admin_roles_create" %}', {method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')}, body: JSON.stringify({name: name})})
+      .then(r=>r.json()).then(data=>{ if(data.success){ newRoleName.value=''; loadRoles(data.id); } else { alert(data.error||'Failed'); } });
+  });
+
+  loadRoles();
+})();
+</script>
+{% endblock %}

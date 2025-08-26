@@ -1,0 +1,112 @@
+{% extends 'mfa/base.html' %}
+{% load static %}
+{% block title %}Admin Login - {{ site_name }}{% endblock %}
+{% block content %}
+  {% include 'partials/navbar.html' %}
+  <section class="auth-hero py-5 py-lg-5">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-12">
+          <div class="glass-frame hero-unified">
+            <div class="row align-items-stretch no-gutters">
+              <div class="col-lg-6 d-none d-lg-block d-flex pr-lg-0">
+                <div class="auth-hero-copy frame-panel-left gradient-hero no-right-radius text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+                  <div class="hero-body">
+                    <span class="badge badge-pill mb-3">Admin Area</span>
+                    <h1 class="display-4 mb-3">Secure access to your <span class="text-white-75">Admin</span> dashboard</h1>
+                    <p class="text-white-75 mb-4">Hardened login with captcha and MFA. Designed for speed and safety.</p>
+                    <ul class="list-unstyled small text-white-50 mb-0">
+                      <li class="mb-2"><i class="fas fa-check mr-2 text-white"></i>Email verification for /admin/</li>
+                      <li class="mb-2"><i class="fas fa-check mr-2 text-white"></i>Session protection & rate limiting</li>
+                      <li><i class="fas fa-check mr-2 text-white"></i>MFA-first workflow</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-6 d-flex pl-lg-0">
+                <div class="frame-panel p-4 p-lg-4 signup-form-panel h-100 d-flex flex-column justify-content-center w-100">
+                  <div class="form-inner">
+                    <h2 class="h4 text-center mb-2 font-weight-bold"><span class="brand-color">A</span>dmin Login</h2>
+                    <p class="text-center text-muted mb-4">Superusers only</p>
+                    {% if messages %}
+                      {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} py-2 small" role="alert">{{ message }}</div>
+                      {% endfor %}
+                    {% endif %}
+                    <form method="post" novalidate data-captcha-error="Please complete the admin security check.">
+                      {% csrf_token %}
+                      {% if request.GET.next %}
+                        <input type="hidden" name="next" value="{{ request.GET.next }}"/>
+                      {% endif %}
+                      <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label }}</label>
+                        <div class="input-group input-group-elevated">
+                          <div class="input-group-prepend">
+                            <span class="input-group-text" id="admin-username-addon" aria-hidden="true"><i class="fa fa-user-shield"></i></span>
+                          </div>
+                          <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" class="form-control" required placeholder="Username or Email" autocomplete="username" aria-describedby="admin-username-addon">
+                        </div>
+                        {% for error in form.username.errors %}
+                          <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                      </div>
+                      <div class="mb-3">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label }}</label>
+                        <div class="input-group input-group-elevated">
+                          <div class="input-group-prepend">
+                            <span class="input-group-text" id="admin-password-addon" aria-hidden="true"><i class="fa fa-lock"></i></span>
+                          </div>
+                          <input type="password" name="{{ form.password.name }}" id="{{ form.password.id_for_label }}" class="form-control" required placeholder="Password" autocomplete="current-password" aria-describedby="admin-password-addon">
+                        </div>
+                        {% for error in form.password.errors %}
+                          <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                      </div>
+                      {% if recaptcha_site_key %}
+                      <div class="mb-3" data-no-invalid-icon>
+                        <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+                      </div>
+                      {% elif turnstile_site_key %}
+                      <div class="mb-3" data-no-invalid-icon>
+                        <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
+                      </div>
+                      {% endif %}
+                      <button type="submit" class="submitButton w-100">Sign in</button>
+                    </form>
+                    <div class="mt-4 text-center text-muted small">
+                      After login, you may be asked to verify by email when accessing /admin/.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% include 'partials/footer.html' %}
+  {% if recaptcha_site_key %}
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  <noscript>
+    <div class="alert alert-warning mt-2">JavaScript is disabled; reCAPTCHA cannot load.</div>
+  </noscript>
+  <script>
+    window.addEventListener('load', function () {
+      if (!window.grecaptcha) {
+        console.warn('reCAPTCHA api.js not loaded on admin login, injecting enterprise.js fallback.');
+        var s = document.createElement('script');
+        s.src = 'https://www.google.com/recaptcha/enterprise.js';
+        s.async = true; s.defer = true;
+        document.head.appendChild(s);
+        var box = document.createElement('div');
+        box.className = 'alert alert-warning mt-2';
+        box.textContent = 'reCAPTCHA script may be blocked; attempted enterprise.js fallback. If still not visible, disable ad/script blockers.';
+        document.body.appendChild(box);
+      }
+    });
+  </script>
+  {% elif turnstile_site_key %}
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  {% endif %}
+{% endblock %}

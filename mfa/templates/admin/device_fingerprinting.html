@@ -1,0 +1,461 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Device Fingerprinting - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Device Fingerprinting{% endblock %}
+{% block admin_content %}
+<div class="container py-5 admin-dashboard">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Advanced Security</span>
+                <h1 class="display-4 mb-3">Device Fingerprinting</h1>
+                <p class="text-white-75 mb-0">Advanced device identification and fraud prevention system.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key Metrics -->
+      <div class="row g-3 stats-cards-row mt-3">
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Unique Devices</div>
+              <div class="display-6">{{ unique_devices }}</div>
+              <i class="fas fa-mobile-alt text-primary mt-2"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Fraud Attempts</div>
+              <div class="display-6 text-danger">{{ fraud_attempts }}</div>
+              <i class="fas fa-shield-alt text-danger mt-2"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Bot Detections</div>
+              <div class="display-6 text-warning">{{ bot_detections }}</div>
+              <i class="fas fa-robot text-warning mt-2"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Trust Score</div>
+              <div class="display-6 text-success">{{ trust_score|default:"-" }}{% if trust_score %}%{% endif %}</div>
+              <i class="fas fa-check-circle text-success mt-2"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device Fingerprint Analysis -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+              <h5 class="mb-0">
+                <i class="fas fa-fingerprint mr-2"></i>Device Fingerprint Analysis
+              </h5>
+              <div class="d-flex flex-wrap justify-content-center justify-content-md-right align-items-center mt-2 mt-md-0" style="gap: 0.5rem;">
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshFingerprints()">
+                  <i class="fas fa-sync-alt"></i><span class="d-none d-md-inline ml-1">Refresh</span>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="exportReport()">
+                  <i class="fas fa-download"></i><span class="d-none d-md-inline ml-1">Export</span>
+                </button>
+              </div>
+            </div>
+          </div>
+              
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Device ID</th>
+                      <th>User</th>
+                      <th>Browser</th>
+                      <th>OS</th>
+                      <th>Risk Score</th>
+                      <th>Last Seen</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for d in fingerprints %}
+                  <tr class="{% if d.risk_level == 'high' %}table-danger{% endif %}">
+                    <td><code>{{ d.device_id }}</code></td>
+                    <td>{{ d.user_username|default:d.user_email|default:"-" }}</td>
+                    <td>{{ d.browser|default:"-" }}</td>
+                    <td>{{ d.os|default:"-" }}</td>
+                    <td>
+                      {% if d.risk_level == 'high' %}<span class="badge bg-danger">High ({{ d.risk_score }}%)</span>
+                      {% elif d.risk_level == 'medium' %}<span class="badge bg-warning">Medium ({{ d.risk_score }}%)</span>
+                      {% else %}<span class="badge bg-success">Low ({{ d.risk_score|default:0 }}%)</span>{% endif %}
+                    </td>
+                    <td>{{ d.last_seen|default:"-" }}</td>
+                    <td>
+                      <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="viewDeviceDetails('{{ d.device_id }}')" title="View Details">
+                          <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="blockDevice('{{ d.device_id }}')" title="Block Device">
+                          <i class="fas fa-ban"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="7" class="text-muted text-center">No device fingerprints available</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      <!-- Device Types Chart -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header">
+            <h5 class="mb-3">
+              <i class="fas fa-chart-pie mr-2"></i>Device Types
+            </h5>
+          </div>
+          <div class="chart-container" style="height: 280px;">
+            <canvas id="deviceTypesChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Distribution -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header">
+            <h5 class="mb-3">
+              <i class="fas fa-exclamation-triangle mr-2"></i>Risk Distribution
+            </h5>
+          </div>
+          <div class="chart-container" style="height: 260px;">
+            <canvas id="riskChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Detections -->
+      <div class="card shadow-sm mt-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header">
+                <h5 class="mb-3">
+                  <i class="fas fa-shield-alt mr-2"></i>Recent Detections
+                </h5>
+              </div>
+              <div class="list-group list-group-flush">
+                {% for det in recent_detections %}
+                <div class="list-group-item px-0 border-0">
+                  <div class="d-flex align-items-center">
+                    <div class="{% if det.severity == 'high' %}bg-danger{% elif det.severity == 'medium' %}bg-warning{% else %}bg-secondary{% endif %} text-white rounded-circle p-2 me-3">
+                      <i class="fas fa-{{ det.icon|default:'exclamation-triangle' }}"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold small">{{ det.title }}</div>
+                      <div class="text-muted small">{{ det.subtitle }}</div>
+                      <div class="text-muted small">{{ det.when }}</div>
+                    </div>
+                  </div>
+                </div>
+                {% empty %}
+                <div class="text-muted small text-center py-2">No recent detections</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Fraud Attempts -->
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header">
+                <h5 class="mb-3">
+                  <i class="fas fa-exclamation-circle mr-2"></i>Recent Fraud Attempts
+                </h5>
+              </div>
+              <div class="list-group list-group-flush">
+                <div class="list-group-item px-0">
+                  <div class="d-flex justify-content-between">
+                    <div>
+                      <strong>Bot Attack</strong>
+                      <br><small class="text-muted">IP: 192.168.1.100</small>
+                    </div>
+                    <small class="text-muted">2 min ago</small>
+                  </div>
+                </div>
+                <div class="list-group-item px-0">
+                  <div class="d-flex justify-content-between">
+                    <div>
+                      <strong>Device Spoofing</strong>
+                      <br><small class="text-muted">User: suspicious.user</small>
+                    </div>
+                    <small class="text-muted">15 min ago</small>
+                  </div>
+                </div>
+                <div class="list-group-item px-0">
+                  <div class="d-flex justify-content-between">
+                    <div>
+                      <strong>Multiple Logins</strong>
+                      <br><small class="text-muted">User: john.doe</small>
+                    </div>
+                    <small class="text-muted">1 hour ago</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fraud Detection Rules -->
+      <div class="card shadow-sm rounded-3 mt-4">
+        <div class="card-body">
+          <div class="section-header">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+              <h5 class="mb-0">
+                <i class="fas fa-shield-alt mr-2"></i>Fraud Detection Rules
+              </h5>
+              <div class="d-flex flex-wrap justify-content-center justify-content-md-right align-items-center mt-2 mt-md-0" style="gap: 0.5rem;">
+                <button class="btn btn-sm btn-outline-primary" onclick="addFraudRule()">
+                  <i class="fas fa-plus"></i><span class="d-none d-md-inline ml-1">Add Rule</span>
+                </button>
+              </div>
+            </div>
+          
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Rule Name</th>
+                  <th>Condition</th>
+                  <th>Action</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Multiple Device Login</td>
+                  <td>Same user, different fingerprints within 5 min</td>
+                  <td>Require MFA</td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="editRule('rule1')">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Bot Detection</td>
+                  <td>Automated behavior patterns detected</td>
+                  <td>Block Access</td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="editRule('rule2')">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Suspicious Fingerprint</td>
+                  <td>Device fingerprint matches known fraud patterns</td>
+                  <td>Flag for Review</td>
+                  <td><span class="badge bg-warning">Testing</span></td>
+                  <td>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="editRule('rule3')">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Device Details Modal -->
+<div class="modal fade" id="deviceDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Device Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="deviceDetailsContent">
+          <!-- Device details will be loaded here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+  {{ block.super }}
+  <style>
+    /* Fix chart height growth by constraining container and canvas */
+    .chart-container{ position: relative; }
+    #deviceTypesChart{ height: 100% !important; width: 100% !important; }
+    #riskChart{ height: 100% !important; width: 100% !important; }
+  </style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Colors palette
+const chartColors = ['#007bff', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1'];
+
+// Device Types chart (real data)
+async function renderDeviceTypes() {
+  const deviceCanvas = document.getElementById('deviceTypesChart');
+  if (!deviceCanvas) return;
+  if (window.deviceTypesChart) { try { window.deviceTypesChart.destroy(); } catch (e) {} }
+  const res = await fetch('{% url "mfa:admin_api_device_types" %}', { credentials: 'same-origin' });
+  const payload = await res.json();
+  const deviceCtx = deviceCanvas.getContext('2d');
+  window.deviceTypesChart = new Chart(deviceCtx, {
+    type: 'doughnut',
+    data: {
+      labels: payload.labels,
+      datasets: [{
+        data: payload.counts,
+        backgroundColor: chartColors.slice(0, payload.labels.length)
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+}
+
+// Risk Distribution chart (real data)
+async function renderRiskDistribution() {
+  const riskCanvas = document.getElementById('riskChart');
+  if (!riskCanvas) return;
+  if (window.riskChart) { try { window.riskChart.destroy(); } catch (e) {} }
+  const res = await fetch('{% url "mfa:admin_api_risk_distribution" %}', { credentials: 'same-origin' });
+  const payload = await res.json();
+  const riskCtx = riskCanvas.getContext('2d');
+  window.riskChart = new Chart(riskCtx, {
+    type: 'bar',
+    data: {
+      labels: payload.labels,
+      datasets: [{
+        label: 'Events',
+        data: payload.counts,
+        backgroundColor: chartColors.slice(0, payload.labels.length)
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+// Initial render
+renderDeviceTypes();
+renderRiskDistribution();
+
+// Functions
+function refreshFingerprints() {
+  location.reload();
+}
+
+function exportReport() {
+  alert('Exporting device fingerprinting report...');
+}
+
+function viewDeviceDetails(deviceId) {
+  // Load device details
+  const modal = new bootstrap.Modal(document.getElementById('deviceDetailsModal'));
+  document.getElementById('deviceDetailsContent').innerHTML = `
+    <div class="row">
+      <div class="col-md-6">
+        <h6>Device Information</h6>
+        <table class="table table-sm">
+          <tr><td><strong>Device ID:</strong></td><td><code>${deviceId}</code></td></tr>
+          <tr><td><strong>Browser:</strong></td><td>Chrome 119.0.6045.105</td></tr>
+          <tr><td><strong>OS:</strong></td><td>Windows 11</td></tr>
+          <tr><td><strong>Screen:</strong></td><td>1920x1080</td></tr>
+          <tr><td><strong>Timezone:</strong></td><td>UTC-5</td></tr>
+        </table>
+      </div>
+      <div class="col-md-6">
+        <h6>Risk Factors</h6>
+        <ul class="list-unstyled">
+          <li><i class="fas fa-check text-success me-2"></i>Consistent fingerprint</li>
+          <li><i class="fas fa-check text-success me-2"></i>Known user agent</li>
+          <li><i class="fas fa-times text-danger me-2"></i>VPN detected</li>
+          <li><i class="fas fa-check text-success me-2"></i>Normal behavior pattern</li>
+        </ul>
+      </div>
+    </div>
+  `;
+  modal.show();
+}
+
+function blockDevice(deviceId) {
+  if (confirm('Are you sure you want to block this device?')) {
+    fetch('{% url "mfa:admin_block_device" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({
+        device_id: deviceId
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Device blocked successfully');
+        location.reload();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    });
+  }
+}
+
+function addFraudRule() {
+  alert('Add fraud rule functionality would be implemented here');
+}
+
+function editRule(ruleId) {
+  alert('Edit rule functionality would be implemented here');
+}
+</script>
+{% endblock %}

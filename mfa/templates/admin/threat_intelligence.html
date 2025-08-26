@@ -1,0 +1,678 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block title %}Threat Intelligence{% endblock %}
+{% block admin_page_name %}Threat Intelligence{% endblock %}
+{% block admin_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">AI-Powered Security</span>
+                <h1 class="display-5 mb-2">🛡️ Threat Intelligence Center</h1>
+                <p class="text-white-75 mb-0">Advanced threat detection with real-time intelligence feeds and automated response.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threat Overview Dashboard -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header section-header-on-green d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 text-white">🎯 Active Threat Landscape</h5>
+                <div class="d-flex gap-2">
+                  <span class="badge bg-light text-dark">Last Updated: {{ last_intel_update|timesince }} ago</span>
+                  <button class="btn btn-light btn-sm" onclick="refreshIntelligence()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                  </button>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="threat-metric bg-danger text-white">
+                    <div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="metric-value">{{ critical_threats }}</div>
+                    <div class="metric-label">Critical Threats</div>
+                    <div class="metric-change">+{{ critical_change }}% vs yesterday</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="threat-metric bg-warning text-white">
+                    <div class="metric-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="metric-value">{{ blocked_attacks }}</div>
+                    <div class="metric-label">Blocked Attacks</div>
+                    <div class="metric-change">Last 24 hours</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="threat-metric bg-info text-white">
+                    <div class="metric-icon"><i class="fas fa-globe"></i></div>
+                    <div class="metric-value">{{ malicious_ips }}</div>
+                    <div class="metric-label">Malicious IPs</div>
+                    <div class="metric-change">Auto-blocked</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="threat-metric bg-success text-white">
+                    <div class="metric-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="metric-value">{{ protection_rate }}%</div>
+                    <div class="metric-label">Protection Rate</div>
+                    <div class="metric-change">System effectiveness</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">🌍 Global Threat Map</h5>
+              <div class="threat-map-container">
+                <div class="threat-source">
+                  <div class="country-flag">🇨🇳</div>
+                  <div class="threat-info">
+                    <div class="country-name">China</div>
+                    <div class="threat-count">{{ china_threats }} threats</div>
+                    <div class="progress" style="height: 4px;">
+                      <div class="progress-bar bg-danger" style="width: 45%"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="threat-source">
+                  <div class="country-flag">🇷🇺</div>
+                  <div class="threat-info">
+                    <div class="country-name">Russia</div>
+                    <div class="threat-count">{{ russia_threats }} threats</div>
+                    <div class="progress" style="height: 4px;">
+                      <div class="progress-bar bg-warning" style="width: 32%"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="threat-source">
+                  <div class="country-flag">🇰🇵</div>
+                  <div class="threat-info">
+                    <div class="country-name">North Korea</div>
+                    <div class="threat-count">{{ nk_threats }} threats</div>
+                    <div class="progress" style="height: 4px;">
+                      <div class="progress-bar bg-info" style="width: 18%"></div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="threat-source">
+                  <div class="country-flag">🇮🇷</div>
+                  <div class="threat-info">
+                    <div class="country-name">Iran</div>
+                    <div class="threat-count">{{ iran_threats }} threats</div>
+                    <div class="progress" style="height: 4px;">
+                      <div class="progress-bar bg-secondary" style="width: 12%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Intelligence Feeds -->
+      <div class="card shadow-sm mb-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📡 Intelligence Feeds</h5>
+            <div class="d-flex gap-2">
+              <select class="form-select form-select-sm" id="feed-filter">
+                <option value="">All Feeds</option>
+                <option value="malware">Malware</option>
+                <option value="phishing">Phishing</option>
+                <option value="botnet">Botnet</option>
+                <option value="apt">APT Groups</option>
+              </select>
+              <button class="btn btn-outline-primary btn-sm" onclick="configureFeed()">
+                <i class="fas fa-cog"></i> Configure
+              </button>
+            </div>
+          </div>
+          
+          <div class="row mt-3">
+            <div class="col-md-4">
+              <div class="intel-feed-card">
+                <div class="feed-header">
+                  <div class="feed-icon bg-danger">
+                    <i class="fas fa-virus"></i>
+                  </div>
+                  <div class="feed-info">
+                    <h6>Malware Intelligence</h6>
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+                <div class="feed-stats">
+                  <div class="stat-item">
+                    <span class="stat-value">{{ malware_signatures }}</span>
+                    <span class="stat-label">Signatures</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-value">{{ malware_updates }}</span>
+                    <span class="stat-label">Daily Updates</span>
+                  </div>
+                </div>
+                <div class="feed-actions">
+                  <button class="btn btn-outline-primary btn-sm" onclick="viewFeedDetails('malware')">
+                    <i class="fas fa-eye"></i> View Details
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="intel-feed-card">
+                <div class="feed-header">
+                  <div class="feed-icon bg-warning">
+                    <i class="fas fa-fishing"></i>
+                  </div>
+                  <div class="feed-info">
+                    <h6>Phishing Detection</h6>
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+                <div class="feed-stats">
+                  <div class="stat-item">
+                    <span class="stat-value">{{ phishing_domains }}</span>
+                    <span class="stat-label">Blocked Domains</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-value">{{ phishing_updates }}</span>
+                    <span class="stat-label">Hourly Updates</span>
+                  </div>
+                </div>
+                <div class="feed-actions">
+                  <button class="btn btn-outline-primary btn-sm" onclick="viewFeedDetails('phishing')">
+                    <i class="fas fa-eye"></i> View Details
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="intel-feed-card">
+                <div class="feed-header">
+                  <div class="feed-icon bg-info">
+                    <i class="fas fa-network-wired"></i>
+                  </div>
+                  <div class="feed-info">
+                    <h6>Botnet Tracking</h6>
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+                <div class="feed-stats">
+                  <div class="stat-item">
+                    <span class="stat-value">{{ botnet_ips }}</span>
+                    <span class="stat-label">C&C IPs</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-value">{{ botnet_families }}</span>
+                    <span class="stat-label">Active Families</span>
+                  </div>
+                </div>
+                <div class="feed-actions">
+                  <button class="btn btn-outline-primary btn-sm" onclick="viewFeedDetails('botnet')">
+                    <i class="fas fa-eye"></i> View Details
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Threat Alerts -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">🚨 Recent Threat Alerts</h5>
+                <button class="btn btn-outline-danger btn-sm" onclick="exportThreatReport()">
+                  <i class="fas fa-download"></i> Export Report
+                </button>
+              </div>
+              <div class="threat-alerts mt-3">
+                {% for alert in recent_alerts %}
+                <div class="alert-item severity-{{ alert.severity }}">
+                  <div class="alert-icon">
+                    <i class="fas fa-{{ alert.icon }}"></i>
+                  </div>
+                  <div class="alert-content">
+                    <div class="alert-title">{{ alert.title }}</div>
+                    <div class="alert-description">{{ alert.description }}</div>
+                    <div class="alert-meta">
+                      <span class="alert-time">{{ alert.timestamp|timesince }} ago</span>
+                      <span class="alert-source">Source: {{ alert.source }}</span>
+                      <span class="badge bg-{{ alert.severity_color }}">{{ alert.severity|upper }}</span>
+                    </div>
+                  </div>
+                  <div class="alert-actions">
+                    <button class="btn btn-outline-primary btn-sm" onclick="investigateAlert('{{ alert.id }}')">
+                      <i class="fas fa-search"></i> Investigate
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="blockThreat('{{ alert.id }}')">
+                      <i class="fas fa-ban"></i> Block
+                    </button>
+                  </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-4">
+                  <i class="fas fa-shield-alt fa-3x mb-3 text-success"></i>
+                  <h6>No Active Threats</h6>
+                  <p>Your system is currently secure</p>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">⚡ Automated Response</h5>
+              <div class="response-rule">
+                <div class="rule-header">
+                  <div class="rule-icon bg-danger">
+                    <i class="fas fa-robot"></i>
+                  </div>
+                  <div class="rule-info">
+                    <h6>Auto-Block Malicious IPs</h6>
+                    <span class="badge bg-success">Enabled</span>
+                  </div>
+                </div>
+                <div class="rule-stats">
+                  <small class="text-muted">Blocked {{ auto_blocked_ips }} IPs today</small>
+                </div>
+              </div>
+              
+              <div class="response-rule">
+                <div class="rule-header">
+                  <div class="rule-icon bg-warning">
+                    <i class="fas fa-envelope"></i>
+                  </div>
+                  <div class="rule-info">
+                    <h6>Alert Notifications</h6>
+                    <span class="badge bg-success">Enabled</span>
+                  </div>
+                </div>
+                <div class="rule-stats">
+                  <small class="text-muted">Sent {{ alert_notifications }} alerts today</small>
+                </div>
+              </div>
+              
+              <div class="response-rule">
+                <div class="rule-header">
+                  <div class="rule-icon bg-info">
+                    <i class="fas fa-user-lock"></i>
+                  </div>
+                  <div class="rule-info">
+                    <h6>Account Quarantine</h6>
+                    <span class="badge bg-success">Enabled</span>
+                  </div>
+                </div>
+                <div class="rule-stats">
+                  <small class="text-muted">Quarantined {{ quarantined_accounts }} accounts</small>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <button class="btn btn-outline-primary btn-sm w-100" onclick="configureAutomation()">
+                  <i class="fas fa-cog"></i> Configure Automation
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threat Intelligence Analytics -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📈 Threat Analytics</h5>
+            <div class="d-flex gap-2">
+              <select class="form-select form-select-sm" id="analytics-period">
+                <option value="24h">Last 24 hours</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-8">
+              <canvas id="threatChart" height="300"></canvas>
+            </div>
+            <div class="col-md-4">
+              <div class="threat-categories">
+                <h6>Top Threat Categories</h6>
+                {% for category in threat_categories %}
+                <div class="category-item">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="category-name">{{ category.name }}</span>
+                    <span class="category-count">{{ category.count }}</span>
+                  </div>
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-danger" style="width: 75%"></div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.threat-metric {
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+.metric-icon {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  opacity: 0.3;
+}
+.metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+.metric-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-bottom: 0.25rem;
+}
+.metric-change {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.threat-source {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+.threat-source:last-child {
+  border-bottom: none;
+}
+.country-flag {
+  font-size: 1.5rem;
+  margin-right: 0.75rem;
+}
+.threat-info {
+  flex: 1;
+}
+.country-name {
+  font-weight: bold;
+  color: #334155;
+  margin-bottom: 0.25rem;
+}
+.threat-count {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+.intel-feed-card {
+  border: 1px solid #e1e6ea;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #fff;
+  height: 100%;
+}
+.feed-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.feed-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 0.75rem;
+}
+.feed-info h6 {
+  margin-bottom: 0.25rem;
+  color: #334155;
+}
+.feed-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+.stat-item {
+  text-align: center;
+}
+.stat-value {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #334155;
+}
+.stat-label {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 1rem;
+  border-left: 4px solid #e1e6ea;
+  background: #f8f9fa;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 1rem;
+}
+.alert-item.severity-high {
+  border-left-color: #dc3545;
+  background: #fff5f5;
+}
+.alert-item.severity-medium {
+  border-left-color: #ffc107;
+  background: #fffbf0;
+}
+.alert-item.severity-low {
+  border-left-color: #17a2b8;
+  background: #f0f9ff;
+}
+.alert-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #dc3545;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+.alert-content {
+  flex: 1;
+}
+.alert-title {
+  font-weight: bold;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+.alert-description {
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+.alert-meta {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+.alert-meta > * {
+  margin-right: 1rem;
+}
+.alert-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.response-rule {
+  padding: 1rem;
+  border: 1px solid #e1e6ea;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  background: #fff;
+}
+.rule-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.rule-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 0.75rem;
+}
+.rule-info h6 {
+  margin-bottom: 0.25rem;
+  color: #334155;
+}
+.category-item {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+.category-item:last-child {
+  border-bottom: none;
+}
+.category-name {
+  font-weight: 500;
+  color: #334155;
+}
+.category-count {
+  font-weight: bold;
+  color: #64748b;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Threat analytics chart
+const threatCtx = document.getElementById('threatChart').getContext('2d');
+new Chart(threatCtx, {
+  type: 'line',
+  data: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    datasets: [{
+      label: 'Blocked Threats',
+      data: [45, 52, 38, 67, 43, 58],
+      borderColor: '#28a745',
+      backgroundColor: 'rgba(40, 167, 69, 0.1)',
+      tension: 0.4
+    }, {
+      label: 'Detected Threats',
+      data: [78, 85, 62, 92, 71, 89],
+      borderColor: '#ffc107',
+      backgroundColor: 'rgba(255, 193, 7, 0.1)',
+      tension: 0.4
+    }, {
+      label: 'Critical Alerts',
+      data: [12, 18, 8, 25, 15, 22],
+      borderColor: '#dc3545',
+      backgroundColor: 'rgba(220, 53, 69, 0.1)',
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom'
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    }
+  }
+});
+
+function refreshIntelligence() {
+  window.location.reload();
+}
+
+function configureFeed() {
+  alert('Intelligence feed configuration would open here');
+}
+
+function viewFeedDetails(feedType) {
+  window.location.href = `/mfa/admin/threat-intelligence/feeds/${feedType}/`;
+}
+
+function exportThreatReport() {
+  window.location.href = '{% url "mfa:admin_export_threat_report" %}';
+}
+
+function investigateAlert(alertId) {
+  window.location.href = `/mfa/admin/threat-intelligence/alerts/${alertId}/`;
+}
+
+function blockThreat(alertId) {
+  if (confirm('Block this threat source?')) {
+    fetch('{% url "mfa:admin_block_threat" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({alert_id: alertId})
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Threat blocked successfully');
+          window.location.reload();
+        } else {
+          alert('Failed to block threat: ' + data.error);
+        }
+      });
+  }
+}
+
+function configureAutomation() {
+  alert('Automation configuration would open here');
+}
+</script>
+{% endblock %}

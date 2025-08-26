@@ -1,0 +1,170 @@
+{% extends 'mfa/base.html' %}
+{% load static %}
+{% block title %}Set Up Passkey - {{ site_name }} MFA{% endblock %}
+{% block content %}
+    {% include 'partials/navbar.html' %}
+    <div class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-5">
+          <div class="card border shadow-lg p-4 text-center">
+            <h2 class="h2Title mb-2" style="font-size: calc(1.9rem + 0.5vw) !important;"><span class="brand-color">S</span>et Up Your Passkey</h2>
+            <p class="text-muted mb-3">A passkey lets you sign in securely without a password using your device lock or a security key.</p>
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} py-2 small" role="alert">{{ message }}</div>
+              {% endfor %}
+            {% endif %}
+            <div class="d-flex align-items-center my-3">
+              <div class="flex-grow-1 border-top"></div>
+            </div>
+            <div id="passkey-error" class="alert alert-danger d-none text-start"></div>
+            <div id="passkey-success" class="alert alert-success d-none text-start">Passkey created successfully! Redirecting you back to security settings...</div>
+            <form id="passkey-form" method="post" action="{% url 'mfa:setup_passkey' %}">
+              {% csrf_token %}
+              <input type="hidden" name="token" id="passkey-token">
+            </form>
+            <div class="d-grid gap-2 mt-2">
+              <button id="register-passkey" type="button" class="submitButton w-100">
+                <span id="spinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                <span id="button-text" class="mb-5">Create a Passkey</span>
+              </button>
+              <a href="{% url 'mfa:security_hub' %}" class="mt-4">Maybe later</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% include 'partials/footer.html' %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const registerBtn = document.getElementById('register-passkey');
+        const form = document.getElementById('passkey-form');
+        const tokenInput = document.getElementById('passkey-token');
+        const errorDiv = document.getElementById('passkey-error');
+        const successDiv = document.getElementById('passkey-success');
+        const spinner = document.getElementById('spinner');
+        const buttonText = document.getElementById('button-text');
+        const csrfToken = getCookie('csrftoken');
+        if (!window.PublicKeyCredential) {
+            errorDiv.textContent = 'WebAuthn is not supported in your browser. Please try a modern browser that supports it.';
+            errorDiv.classList.remove('d-none');
+            registerBtn.disabled = true;
+            return;
+        }
+        registerBtn.addEventListener('click', async (evt) => {
+            if (evt && typeof evt.preventDefault === 'function') evt.preventDefault();
+            errorDiv.classList.add('d-none');
+            registerBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            buttonText.textContent = 'Creating passkey...';
+            console.log('[Passkey][Reg] Click handler started');
+            try {
+                const response = await fetch('{% url "passkeys:reg_begin" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    credentials: 'same-origin'
+                });
+                console.log('[Passkey][Reg] reg_begin status:', response.status);
+                if (!response.ok) {
+                    throw new Error('Failed to get registration options');
+                }
+                const options = await response.json();
+                const publicKey = {
+                    ...options.publicKey,
+                    challenge: base64urlToArrayBuffer(options.publicKey.challenge),
+                    user: {
+                        ...options.publicKey.user,
+                        id: base64urlToArrayBuffer(options.publicKey.user.id)
+                    }
+                };
+                (function ensureRpId() {
+                    const host = window.location.hostname;
+                    if (!publicKey.rp) {
+                        publicKey.rp = { id: host, name: options.publicKey?.rp?.name || 'GreenShield MFA' };
+                    } else if (!publicKey.rp.id || publicKey.rp.id !== host) {
+                        console.log('[Passkey][Reg] Overriding rp.id from', publicKey.rp.id, 'to', host);
+                        publicKey.rp.id = host;
+                    }
+                })();
+                if (!publicKey.userVerification) {
+                    publicKey.userVerification = 'preferred';
+                }
+                console.log('[Passkey][Reg] Origin:', window.location.origin);
+                console.log('[Passkey][Reg] PublicKey.rp:', publicKey.rp);
+                const credential = await navigator.credentials.create({
+                    publicKey: publicKey
+                });
+                const responseData = {
+                    id: credential.id,
+                    rawId: arrayBufferToBase64url(credential.rawId),
+                    type: credential.type,
+                    response: {
+                        attestationObject: arrayBufferToBase64url(credential.response.attestationObject),
+                        clientDataJSON: arrayBufferToBase64url(credential.response.clientDataJSON)
+                    }
+                };
+                const verifyResponse = await fetch('{% url "passkeys:reg_complete" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(responseData),
+                    credentials: 'same-origin'
+                });
+                console.log('[Passkey][Reg] reg_complete status:', verifyResponse.status);
+                if (!verifyResponse.ok) {
+                    throw new Error('Failed to verify passkey registration');
+                }
+                successDiv.classList.remove('d-none');
+                setTimeout(() => {
+                    window.location.href = '{% url "mfa:security_hub" %}';
+                }, 2000);
+            } catch (e) {
+                console.error('Passkey registration failed:', e);
+                const details = e.message || e.toString();
+                if (e.name === 'NotAllowedError' || e.name === 'AbortError') {
+                    errorDiv.textContent = 'Passkey creation was cancelled.';
+                } else {
+                    errorDiv.textContent = `Passkey error (${e.name || 'Error'}): ${details}`;
+                }
+                errorDiv.classList.remove('d-none');
+                registerBtn.disabled = false;
+                spinner.classList.add('d-none');
+                buttonText.textContent = 'Create a Passkey';
+            }
+        });
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+        function base64urlToArrayBuffer(base64url) {
+            const padding = '==='.slice(0, (4 - base64url.length % 4) % 4);
+            const base64 = (base64url + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const binaryString = atob(base64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+        function arrayBufferToBase64url(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binary);
+            return base64
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')
+                .replace(/=+$/, '');
+        }
+    });
+</script>
+{% endblock %}

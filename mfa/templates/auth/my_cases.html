@@ -1,0 +1,67 @@
+{% extends 'mfa/base.html' %}
+{% load static %}
+{% block title %}My Cases - {{ site_name }}{% endblock %}
+{% block content %}
+{% include 'partials/navbar.html' %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0"><span class="brand-color">M</span>y Cases</h2>
+        <a href="{% url 'mfa:profile' %}" class="btn btn-sm btn-outline-secondary">Back to Profile</a>
+      </div>
+      {% if incidents %}
+      <div class="table-responsive border rounded">
+        <table class="table table-sm mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>Incident ID</th>
+              <th>Type</th>
+              <th>Severity</th>
+              <th>Status</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inc in incidents %}
+            <tr>
+              <td class="font-monospace">{{ inc.incident_id }}</td>
+              <td>{{ inc.get_incident_type_display }}</td>
+              <td>
+                {% if inc.severity == 'critical' %}
+                  <span class="badge badge-danger">Critical</span>
+                {% elif inc.severity == 'high' %}
+                  <span class="badge badge-warning">High</span>
+                {% elif inc.severity == 'medium' %}
+                  <span class="badge badge-info">Medium</span>
+                {% else %}
+                  <span class="badge badge-secondary">Low</span>
+                {% endif %}
+              </td>
+              <td>{{ inc.get_status_display }}</td>
+              <td>{{ inc.created_at|date:'Y-m-d H:i' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <div class="text-muted small">Total: {{ total }}</div>
+        <div>
+          {% if page > 1 %}
+            <a class="btn btn-sm btn-outline-primary" href="?page={{ page|add:-1 }}">Previous</a>
+          {% endif %}
+          <span class="mx-2 small">Page {{ page }} of {{ total_pages }}</span>
+          {% if page < total_pages %}
+            <a class="btn btn-sm btn-outline-primary" href="?page={{ page|add:1 }}">Next</a>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="alert alert-light border">You have not opened any cases yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% include 'partials/footer.html' %}
+{% endblock %}

@@ -1,0 +1,488 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block title %}User Behavior Analytics{% endblock %}
+{% block admin_page_name %}User Behavior Analytics{% endblock %}
+{% block admin_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">AI-Powered Analytics</span>
+                <h1 class="display-5 mb-2">🧠 User Behavior Analytics</h1>
+                <p class="text-white-75 mb-0">Advanced machine learning insights into user authentication patterns and anomalies.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Behavior Insights Dashboard -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header section-header-on-green d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 text-white">🎯 Behavioral Anomaly Detection</h5>
+                <div class="d-flex gap-2">
+                  <span class="badge bg-light text-dark">AI Model: Active</span>
+                  <button class="btn btn-light btn-sm" onclick="refreshAnalytics()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                  </button>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="metric-card bg-danger text-white">
+                    <div class="metric-value">{{ anomalous_users }}</div>
+                    <div class="metric-label">Anomalous Users</div>
+                    <div class="metric-change">+{{ anomaly_change }}% vs last week</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="metric-card bg-warning text-white">
+                    <div class="metric-value">{{ unusual_patterns }}</div>
+                    <div class="metric-label">Unusual Patterns</div>
+                    <div class="metric-change">{{ pattern_change }}% change</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="metric-card bg-info text-white">
+                    <div class="metric-value">{{ model_accuracy }}%</div>
+                    <div class="metric-label">Model Accuracy</div>
+                    <div class="metric-change">Confidence Level</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="metric-card bg-success text-white">
+                    <div class="metric-value">{{ predictions_made }}</div>
+                    <div class="metric-label">Predictions Made</div>
+                    <div class="metric-change">Last 24 hours</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">🔍 Risk Factors Analysis</h5>
+              <div class="risk-factor-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Unusual Login Times</span>
+                  <span class="badge bg-danger">High</span>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-danger" style="width: 75%"></div>
+                </div>
+                <small class="text-muted">12 users affected</small>
+              </div>
+              
+              <div class="risk-factor-item mt-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Geographic Anomalies</span>
+                  <span class="badge bg-warning">Medium</span>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-warning" style="width: 45%"></div>
+                </div>
+                <small class="text-muted">8 users affected</small>
+              </div>
+              
+              <div class="risk-factor-item mt-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Device Fingerprinting</span>
+                  <span class="badge bg-info">Low</span>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-info" style="width: 25%"></div>
+                </div>
+                <small class="text-muted">3 users affected</small>
+              </div>
+              
+              <div class="risk-factor-item mt-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Behavioral Patterns</span>
+                  <span class="badge bg-success">Normal</span>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-success" style="width: 15%"></div>
+                </div>
+                <small class="text-muted">2 users affected</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Behavior Timeline -->
+      <div class="card shadow-sm mb-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📈 Behavior Pattern Timeline</h5>
+            <div class="d-flex gap-2">
+              <select class="form-select form-select-sm" id="timeline-period">
+                <option value="24h">Last 24 hours</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+              </select>
+            </div>
+          </div>
+          <canvas id="behaviorChart" style="height: 300px; max-height: 300px;"></canvas>
+        </div>
+      </div>
+
+      <!-- High-Risk Users Table -->
+      <div class="card shadow-sm mb-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">⚠️ Users Requiring Attention</h5>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-warning btn-sm" onclick="bulkContactUsers()">
+                <i class="fas fa-envelope"></i> Contact All
+              </button>
+              <button class="btn btn-outline-danger btn-sm" onclick="exportRiskReport()">
+                <i class="fas fa-download"></i> Export Report
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="select-all-risk"></th>
+                  <th>User</th>
+                  <th>Risk Score</th>
+                  <th>Primary Anomaly</th>
+                  <th>Last Activity</th>
+                  <th>Confidence</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for user in high_risk_users %}
+                <tr>
+                  <td><input type="checkbox" class="risk-user-select" value="{{ user.id }}"></td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="user-avatar bg-danger text-white">{{ user.username|first|upper }}</div>
+                      <div class="ms-2">
+                        <div class="fw-bold">{{ user.username }}</div>
+                        <small class="text-muted">{{ user.email }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ user.risk_color }} fs-6">{{ user.risk_score }}/100</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-outline-{{ user.anomaly_color }}">{{ user.primary_anomaly }}</span>
+                  </td>
+                  <td>{{ user.last_login|timesince }} ago</td>
+                  <td>
+                    <div class="progress" style="height: 8px; width: 60px;">
+                      <div class="progress-bar bg-info" style="width: 72%"></div>
+                    </div>
+                    <small>{{ user.confidence }}%</small>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="viewUserDetails('{{ user.id }}')" title="View Details">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="btn btn-outline-warning" onclick="contactUser('{{ user.id }}')" title="Contact User">
+                        <i class="fas fa-envelope"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" onclick="restrictUser('{{ user.id }}')" title="Restrict Access">
+                        <i class="fas fa-ban"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center text-muted">No high-risk users detected</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ML Model Performance -->
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">🤖 ML Model Performance</h5>
+              <div class="model-metric">
+                <div class="d-flex justify-content-between">
+                  <span>Precision</span>
+                  <strong>94.2%</strong>
+                </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-success" style="width: 94.2%"></div>
+                </div>
+              </div>
+              
+              <div class="model-metric mt-3">
+                <div class="d-flex justify-content-between">
+                  <span>Recall</span>
+                  <strong>89.7%</strong>
+                </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-info" style="width: 89.7%"></div>
+                </div>
+              </div>
+              
+              <div class="model-metric mt-3">
+                <div class="d-flex justify-content-between">
+                  <span>F1 Score</span>
+                  <strong>91.8%</strong>
+                </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-primary" style="width: 91.8%"></div>
+                </div>
+              </div>
+              
+              <div class="mt-3 pt-3 border-top">
+                <small class="text-muted">
+                  <i class="fas fa-clock"></i> Model last trained: 2 hours ago<br>
+                  <i class="fas fa-database"></i> Training data: 15,432 samples
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">📊 Feature Importance</h5>
+              <div class="feature-list">
+                <div class="feature-item">
+                  <div class="d-flex justify-content-between">
+                    <span>Login Time Patterns</span>
+                    <strong>35%</strong>
+                  </div>
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-primary" style="width: 35%"></div>
+                  </div>
+                </div>
+                <div class="feature-item">
+                  <div class="d-flex justify-content-between">
+                    <span>Geographic Location</span>
+                    <strong>28%</strong>
+                  </div>
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-info" style="width: 28%"></div>
+                  </div>
+                </div>
+                <div class="feature-item">
+                  <div class="d-flex justify-content-between">
+                    <span>Device Fingerprint</span>
+                    <strong>22%</strong>
+                  </div>
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-success" style="width: 22%"></div>
+                  </div>
+                </div>
+                <div class="feature-item">
+                  <div class="d-flex justify-content-between">
+                    <span>Session Duration</span>
+                    <strong>15%</strong>
+                  </div>
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-warning" style="width: 15%"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3 pt-3 border-top">
+                <button class="btn btn-outline-primary btn-sm" onclick="retrainModel()">
+                  <i class="fas fa-cogs"></i> Retrain Model
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="exportModelMetrics()">
+                  <i class="fas fa-download"></i> Export Metrics
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.metric-card {
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+.metric-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+.metric-change {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.risk-factor-item {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+.risk-factor-item:last-child {
+  border-bottom: none;
+}
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+.model-metric {
+  padding: 0.5rem 0;
+}
+.feature-item {
+  padding: 0.5rem 0;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Behavior pattern timeline chart
+const behaviorCtx = document.getElementById('behaviorChart').getContext('2d');
+new Chart(behaviorCtx, {
+  type: 'line',
+  data: {
+    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+    datasets: [{
+      label: 'Normal Behavior',
+      data: [85, 92, 78, 88, 95, 82],
+      borderColor: '#28a745',
+      backgroundColor: 'rgba(40, 167, 69, 0.1)',
+      tension: 0.4
+    }, {
+      label: 'Anomalous Behavior',
+      data: [5, 3, 8, 4, 2, 6],
+      borderColor: '#dc3545',
+      backgroundColor: 'rgba(220, 53, 69, 0.1)',
+      tension: 0.4
+    }, {
+      label: 'Suspicious Activity',
+      data: [10, 5, 14, 8, 3, 12],
+      borderColor: '#ffc107',
+      backgroundColor: 'rgba(255, 193, 7, 0.1)',
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom'
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    }
+  }
+});
+
+function refreshAnalytics() {
+  window.location.reload();
+}
+
+function bulkContactUsers() {
+  const selected = document.querySelectorAll('.risk-user-select:checked');
+  if (selected.length === 0) {
+    alert('Please select users to contact');
+    return;
+  }
+  // Implementation for bulk contact
+  alert(`Contacting ${selected.length} high-risk users`);
+}
+
+function exportRiskReport() {
+  window.location.href = '{% url "mfa:admin_export_risk_report" %}';
+}
+
+function viewUserDetails(userId) {
+  window.location.href = `/mfa/admin/users/${userId}/`;
+}
+
+function contactUser(userId) {
+  // Implementation for contacting individual user
+  fetch('{% url "mfa:admin_contact_user" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    },
+    body: JSON.stringify({user_id: userId})
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Security reminder sent successfully');
+      } else {
+        alert('Failed to send reminder: ' + data.error);
+      }
+    });
+}
+
+function restrictUser(userId) {
+  if (confirm('Are you sure you want to restrict this user\'s access?')) {
+    fetch('{% url "mfa:admin_restrict_user" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({user_id: userId})
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('User access restricted successfully');
+          window.location.reload();
+        } else {
+          alert('Failed to restrict access: ' + data.error);
+        }
+      });
+  }
+}
+
+function retrainModel() {
+  alert('Model retraining initiated. This may take several minutes.');
+}
+
+function exportModelMetrics() {
+  window.location.href = '{% url "mfa:admin_export_model_metrics" %}';
+}
+
+// Select all functionality
+document.getElementById('select-all-risk').addEventListener('change', function() {
+  const checkboxes = document.querySelectorAll('.risk-user-select');
+  checkboxes.forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

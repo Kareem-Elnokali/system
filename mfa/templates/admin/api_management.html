@@ -1,0 +1,623 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block title %}API Management{% endblock %}
+{% block admin_page_name %}API Management{% endblock %}
+{% block admin_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Enterprise API</span>
+                <h1 class="display-5 mb-2">🔌 API Management Center</h1>
+                <p class="text-white-75 mb-0">Comprehensive API gateway with authentication, rate limiting, and webhook management.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Overview -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header section-header-on-green d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 text-white">📊 API Gateway Status</h5>
+                <div class="d-flex gap-2">
+                  <span class="badge bg-light text-dark">Uptime: {{ api_uptime }}%</span>
+                  <button class="btn btn-light btn-sm" onclick="refreshApiStats()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                  </button>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="api-metric bg-primary text-white">
+                    <div class="metric-icon"><i class="fas fa-exchange-alt"></i></div>
+                    <div class="metric-value">{{ total_requests }}</div>
+                    <div class="metric-label">Total Requests</div>
+                    <div class="metric-change">Last 24 hours</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="api-metric bg-success text-white">
+                    <div class="metric-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="metric-value">{{ successful_requests }}</div>
+                    <div class="metric-label">Successful</div>
+                    <div class="metric-change">{{ success_rate }}% success rate</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="api-metric bg-warning text-white">
+                    <div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="metric-value">{{ rate_limited }}</div>
+                    <div class="metric-label">Rate Limited</div>
+                    <div class="metric-change">Blocked requests</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="api-metric bg-info text-white">
+                    <div class="metric-icon"><i class="fas fa-clock"></i></div>
+                    <div class="metric-value">{{ avg_response_time }}ms</div>
+                    <div class="metric-label">Avg Response</div>
+                    <div class="metric-change">Performance metric</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">🔑 API Keys</h5>
+              <div class="api-key-stats">
+                <div class="key-stat">
+                  <div class="d-flex justify-content-between">
+                    <span>Active Keys</span>
+                    <strong class="text-success">{{ active_api_keys }}</strong>
+                  </div>
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-success" style="width: 85%"></div>
+                  </div>
+                </div>
+                
+                <div class="key-stat mt-3">
+                  <div class="d-flex justify-content-between">
+                    <span>Expired Keys</span>
+                    <strong class="text-warning">{{ expired_api_keys }}</strong>
+                  </div>
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-warning" style="width: 15%"></div>
+                  </div>
+                </div>
+                
+                <div class="key-stat mt-3">
+                  <div class="d-flex justify-content-between">
+                    <span>Revoked Keys</span>
+                    <strong class="text-danger">{{ revoked_api_keys }}</strong>
+                  </div>
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-danger" style="width: 5%"></div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <button class="btn btn-primary btn-sm w-100" onclick="generateApiKey()">
+                  <i class="fas fa-plus"></i> Generate New Key
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Endpoints -->
+      <div class="card shadow-sm mb-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">🛠️ API Endpoints</h5>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-primary btn-sm" onclick="viewApiDocs()">
+                <i class="fas fa-book"></i> Documentation
+              </button>
+              <button class="btn btn-outline-success btn-sm" onclick="testEndpoints()">
+                <i class="fas fa-play"></i> Test API
+              </button>
+            </div>
+          </div>
+          
+          <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Endpoint</th>
+                  <th>Method</th>
+                  <th>Description</th>
+                  <th>Rate Limit</th>
+                  <th>Usage (24h)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>/api/v1/auth/verify</code></td>
+                  <td><span class="badge bg-success">POST</span></td>
+                  <td>Verify MFA token</td>
+                  <td>100/min</td>
+                  <td>{{ verify_usage }}</td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>
+                    <button class="btn btn-outline-primary btn-sm" onclick="testEndpoint('/api/v1/auth/verify')">
+                      <i class="fas fa-play"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>/api/v1/users/list</code></td>
+                  <td><span class="badge bg-info">GET</span></td>
+                  <td>List users with MFA status</td>
+                  <td>50/min</td>
+                  <td>{{ users_usage }}</td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>
+                    <button class="btn btn-outline-primary btn-sm" onclick="testEndpoint('/api/v1/users/list')">
+                      <i class="fas fa-play"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>/api/v1/devices/register</code></td>
+                  <td><span class="badge bg-success">POST</span></td>
+                  <td>Register new MFA device</td>
+                  <td>10/min</td>
+                  <td>{{ devices_usage }}</td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>
+                    <button class="btn btn-outline-primary btn-sm" onclick="testEndpoint('/api/v1/devices/register')">
+                      <i class="fas fa-play"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>/api/v1/logs/security</code></td>
+                  <td><span class="badge bg-info">GET</span></td>
+                  <td>Retrieve security logs</td>
+                  <td>25/min</td>
+                  <td>{{ logs_usage }}</td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>
+                    <button class="btn btn-outline-primary btn-sm" onclick="testEndpoint('/api/v1/logs/security')">
+                      <i class="fas fa-play"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>/api/v1/policies/enforce</code></td>
+                  <td><span class="badge bg-warning">PUT</span></td>
+                  <td>Enforce security policy</td>
+                  <td>5/min</td>
+                  <td>{{ policies_usage }}</td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td>
+                    <button class="btn btn-outline-primary btn-sm" onclick="testEndpoint('/api/v1/policies/enforce')">
+                      <i class="fas fa-play"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Webhooks Management -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">🔗 Webhook Management</h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="createWebhook()">
+                  <i class="fas fa-plus"></i> Add Webhook
+                </button>
+              </div>
+              
+              <div class="table-responsive mt-3">
+                <table class="table table-sm align-middle">
+                  <thead>
+                    <tr>
+                      <th><input type="checkbox" id="select-all-webhooks"></th>
+                      <th>Name</th>
+                      <th>URL</th>
+                      <th>Events</th>
+                      <th>Status</th>
+                      <th>Last Delivery</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for webhook in webhooks %}
+                    <tr>
+                      <td><input type="checkbox" class="webhook-select" value="{{ webhook.id }}"></td>
+                      <td>
+                        <div class="fw-bold">{{ webhook.name }}</div>
+                        <small class="text-muted">{{ webhook.description }}</small>
+                      </td>
+                      <td>
+                        <code class="webhook-url">{{ webhook.url|truncatechars:30 }}</code>
+                      </td>
+                      <td>
+                        {% for event in webhook.events %}
+                        <span class="badge bg-secondary me-1">{{ event }}</span>
+                        {% endfor %}
+                      </td>
+                      <td>
+                        <span class="badge bg-{{ webhook.status_color }}">
+                          <i class="fas fa-{{ webhook.status_icon }}"></i> {{ webhook.status }}
+                        </span>
+                      </td>
+                      <td>
+                        {% if webhook.last_delivery %}
+                        <div>{{ webhook.last_delivery|timesince }} ago</div>
+                        <small class="text-{{ webhook.last_status_color }}">{{ webhook.last_status }}</small>
+                        {% else %}
+                        <span class="text-muted">Never</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        <div class="btn-group btn-group-sm">
+                          <button class="btn btn-outline-primary" onclick="editWebhook(1)" title="Edit">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <button class="btn btn-outline-success" onclick="testWebhook(1)" title="Test">
+                            <i class="fas fa-play"></i>
+                          </button>
+                          <button class="btn btn-outline-info" onclick="viewWebhookLogs(1)" title="Logs">
+                            <i class="fas fa-list"></i>
+                          </button>
+                          <button class="btn btn-outline-danger" onclick="deleteWebhook(1)" title="Delete">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="7" class="text-center text-muted">No webhooks configured</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">📈 Webhook Analytics</h5>
+              <canvas id="webhookChart" height="200"></canvas>
+              
+              <div class="mt-3">
+                <div class="webhook-stat">
+                  <div class="d-flex justify-content-between">
+                    <span>Success Rate</span>
+                    <strong class="text-success">{{ webhook_success_rate }}%</strong>
+                  </div>
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-success" style="width: 85%"></div>
+                  </div>
+                </div>
+                
+                <div class="webhook-stat mt-3">
+                  <div class="d-flex justify-content-between">
+                    <span>Avg Response Time</span>
+                    <strong class="text-info">{{ webhook_avg_response }}ms</strong>
+                  </div>
+                </div>
+                
+                <div class="webhook-stat mt-3">
+                  <div class="d-flex justify-content-between">
+                    <span>Failed Deliveries</span>
+                    <strong class="text-danger">{{ webhook_failures }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rate Limiting Configuration -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">⚡ Rate Limiting & Throttling</h5>
+            <button class="btn btn-outline-primary btn-sm" onclick="configureRateLimits()">
+              <i class="fas fa-cog"></i> Configure
+            </button>
+          </div>
+          
+          <div class="row mt-3">
+            <div class="col-md-4">
+              <div class="rate-limit-card">
+                <div class="rate-limit-header">
+                  <div class="rate-limit-icon bg-primary">
+                    <i class="fas fa-user"></i>
+                  </div>
+                  <div class="rate-limit-info">
+                    <h6>Per User Limits</h6>
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+                <div class="rate-limit-details">
+                  <div class="limit-item">
+                    <span>Authentication: {{ user_auth_limit }}/min</span>
+                  </div>
+                  <div class="limit-item">
+                    <span>Data Access: {{ user_data_limit }}/min</span>
+                  </div>
+                  <div class="limit-item">
+                    <span>Device Mgmt: {{ user_device_limit }}/min</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="rate-limit-card">
+                <div class="rate-limit-header">
+                  <div class="rate-limit-icon bg-info">
+                    <i class="fas fa-key"></i>
+                  </div>
+                  <div class="rate-limit-info">
+                    <h6>Per API Key Limits</h6>
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+                <div class="rate-limit-details">
+                  <div class="limit-item">
+                    <span>Standard: {{ api_standard_limit }}/hour</span>
+                  </div>
+                  <div class="limit-item">
+                    <span>Premium: {{ api_premium_limit }}/hour</span>
+                  </div>
+                  <div class="limit-item">
+                    <span>Enterprise: {{ api_enterprise_limit }}/hour</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="rate-limit-card">
+                <div class="rate-limit-header">
+                  <div class="rate-limit-icon bg-warning">
+                    <i class="fas fa-globe"></i>
+                  </div>
+                  <div class="rate-limit-info">
+                    <h6>Global Limits</h6>
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+                <div class="rate-limit-details">
+                  <div class="limit-item">
+                    <span>Total RPS: {{ global_rps_limit }}</span>
+                  </div>
+                  <div class="limit-item">
+                    <span>Burst: {{ global_burst_limit }}</span>
+                  </div>
+                  <div class="limit-item">
+                    <span>Concurrent: {{ global_concurrent_limit }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.api-metric {
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+.metric-icon {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  opacity: 0.3;
+}
+.metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+.metric-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-bottom: 0.25rem;
+}
+.metric-change {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.key-stat {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+.key-stat:last-child {
+  border-bottom: none;
+}
+.webhook-url {
+  font-size: 0.85rem;
+  background: #f1f3f4;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+.webhook-stat {
+  padding: 0.5rem 0;
+}
+.rate-limit-card {
+  border: 1px solid #e1e6ea;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+  height: 100%;
+}
+.rate-limit-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.rate-limit-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 0.75rem;
+}
+.rate-limit-info h6 {
+  margin-bottom: 0.25rem;
+  color: #334155;
+}
+.rate-limit-details {
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+.limit-item {
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Webhook analytics chart
+const webhookCtx = document.getElementById('webhookChart').getContext('2d');
+new Chart(webhookCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Successful', 'Failed', 'Timeout'],
+    datasets: [{
+      data: [85, 12, 3],
+      backgroundColor: ['#28a745', '#dc3545', '#ffc107'],
+      borderWidth: 2,
+      borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 15,
+          usePointStyle: true
+        }
+      }
+    }
+  }
+});
+
+function refreshApiStats() {
+  window.location.reload();
+}
+
+function generateApiKey() {
+  alert('API key generation wizard would open here');
+}
+
+function viewApiDocs() {
+  window.open('/mfa/api/docs/', '_blank');
+}
+
+function testEndpoints() {
+  window.open('/mfa/api/test/', '_blank');
+}
+
+function testEndpoint(endpoint) {
+  alert(`Testing endpoint: ${endpoint}`);
+}
+
+function createWebhook() {
+  alert('Webhook creation wizard would open here');
+}
+
+function editWebhook(webhookId) {
+  window.location.href = `/mfa/admin/webhooks/${webhookId}/edit/`;
+}
+
+function testWebhook(webhookId) {
+  fetch(`/mfa/admin/webhooks/${webhookId}/test/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Webhook test successful');
+      } else {
+        alert('Webhook test failed: ' + data.error);
+      }
+    });
+}
+
+function viewWebhookLogs(webhookId) {
+  window.location.href = `/mfa/admin/webhooks/${webhookId}/logs/`;
+}
+
+function deleteWebhook(webhookId) {
+  if (confirm('Are you sure you want to delete this webhook?')) {
+    fetch(`/mfa/admin/webhooks/${webhookId}/delete/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Webhook deleted successfully');
+          window.location.reload();
+        } else {
+          alert('Failed to delete webhook: ' + data.error);
+        }
+      });
+  }
+}
+
+function configureRateLimits() {
+  alert('Rate limiting configuration would open here');
+}
+
+// Select all functionality
+document.getElementById('select-all-webhooks').addEventListener('change', function() {
+  const checkboxes = document.querySelectorAll('.webhook-select');
+  checkboxes.forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,421 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Compliance Report - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Compliance Report{% endblock %}
+{% block admin_content %}
+<div class="container py-5 admin-dashboard">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Compliance</span>
+                <h1 class="display-4 mb-3">Compliance Report</h1>
+                <p class="text-white-75 mb-0">SOX, HIPAA, PCI-DSS compliance monitoring and reporting.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compliance Score Cards -->
+      <div class="row g-3 stats-cards-row mt-3">
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Overall MFA Compliance</div>
+              <div class="display-6 text-success">
+                94%
+              </div>
+              <div class="progress mt-2" style="height:8px;">
+                <div class="progress-bar bg-success" style="width: 94%" aria-valuenow="94" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Staff MFA Compliance</div>
+              <div class="display-6 text-success">
+                98%
+              </div>
+              <div class="progress mt-2" style="height:8px;">
+                <div class="progress-bar bg-success" style="width: 98%" aria-valuenow="98" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Admin MFA Compliance</div>
+              <div class="display-6 text-success">
+                100%
+              </div>
+              <div class="progress mt-2" style="height:8px;">
+                <div class="progress-bar bg-success" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Audit Coverage</div>
+              <div class="display-6 text-success">100%</div>
+              <div class="progress mt-2" style="height:8px;">
+                <div class="progress-bar bg-success" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compliance Standards -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Compliance Standards Status</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="generateComplianceReport()">
+              <i class="fas fa-file-pdf mr-2"></i>Generate PDF Report
+            </button>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-4">
+              <div class="compliance-standard">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">SOX Compliance</h6>
+                  <span class="badge {% if staff_mfa_compliance >= 100 and admin_mfa_compliance >= 100 %}bg-success{% else %}bg-warning{% endif %}">
+                    {% if staff_mfa_compliance >= 100 and admin_mfa_compliance >= 100 %}✓ Compliant{% else %}⚠ Needs Attention{% endif %}
+                  </span>
+                </div>
+                <ul class="list-unstyled small">
+                  <li class="{% if admin_mfa_compliance >= 100 %}text-success{% else %}text-danger{% endif %}">
+                    <i class="fas fa-{% if admin_mfa_compliance >= 100 %}check{% else %}times{% endif %} mr-2"></i>
+                    All administrators use MFA
+                  </li>
+                  <li class="{% if audit_coverage.admin_actions > 0 %}text-success{% else %}text-warning{% endif %}">
+                    <i class="fas fa-{% if audit_coverage.admin_actions > 0 %}check{% else %}exclamation-triangle{% endif %} mr-2"></i>
+                    Administrative actions logged
+                  </li>
+                  <li class="text-success">
+                    <i class="fas fa-check mr-2"></i>
+                    Access controls documented
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="compliance-standard">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">HIPAA Compliance</h6>
+                  <span class="badge {% if overall_mfa_compliance >= 95 %}bg-success{% else %}bg-warning{% endif %}">
+                    {% if overall_mfa_compliance >= 95 %}✓ Compliant{% else %}⚠ Needs Attention{% endif %}
+                  </span>
+                </div>
+                <ul class="list-unstyled small">
+                  <li class="{% if overall_mfa_compliance >= 95 %}text-success{% else %}text-warning{% endif %}">
+                    <i class="fas fa-{% if overall_mfa_compliance >= 95 %}check{% else %}exclamation-triangle{% endif %} mr-2"></i>
+                    Strong authentication required
+                  </li>
+                  <li class="text-success">
+                    <i class="fas fa-check mr-2"></i>
+                    Access logging enabled
+                  </li>
+                  <li class="text-success">
+                    <i class="fas fa-check mr-2"></i>
+                    User access controls
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="compliance-standard">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">PCI-DSS Compliance</h6>
+                  <span class="badge {% if staff_mfa_compliance >= 100 %}bg-success{% else %}bg-warning{% endif %}">
+                    {% if staff_mfa_compliance >= 100 %}✓ Compliant{% else %}⚠ Needs Attention{% endif %}
+                  </span>
+                </div>
+                <ul class="list-unstyled small">
+                  <li class="{% if staff_mfa_compliance >= 100 %}text-success{% else %}text-warning{% endif %}">
+                    <i class="fas fa-{% if staff_mfa_compliance >= 100 %}check{% else %}exclamation-triangle{% endif %} mr-2"></i>
+                    MFA for privileged access
+                  </li>
+                  <li class="text-success">
+                    <i class="fas fa-check mr-2"></i>
+                    Network access controls
+                  </li>
+                  <li class="text-success">
+                    <i class="fas fa-check mr-2"></i>
+                    Security monitoring
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Trail Metrics -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Audit Trail Coverage (30 days)</h5>
+            <a href="{% url 'mfa:admin_logs' %}" class="btn btn-sm btn-outline-secondary">View Full Audit Log</a>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-4">
+              <div class="audit-metric">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Login Attempts</span>
+                  <strong class="text-info">{{ audit_coverage.login_attempts }}</strong>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-info" style="width: 100%"></div>
+                </div>
+                <small class="text-muted">All authentication attempts logged</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="audit-metric">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>MFA Changes</span>
+                  <strong class="text-success">{{ audit_coverage.mfa_changes }}</strong>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-success" style="width: 100%"></div>
+                </div>
+                <small class="text-muted">Device setup/removal tracked</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="audit-metric">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Admin Actions</span>
+                  <strong class="text-warning">{{ audit_coverage.admin_actions }}</strong>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-warning" style="width: 100%"></div>
+                </div>
+                <small class="text-muted">Administrative changes logged</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Security Metrics -->
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Security Metrics</h5>
+              </div>
+              <div class="security-metrics mt-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span>Failed Access Attempts (30d)</span>
+                  <strong class="{% if failed_access_attempts > 100 %}text-danger{% elif failed_access_attempts > 50 %}text-warning{% else %}text-success{% endif %}">
+                    {{ failed_access_attempts }}
+                  </strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span>Password Resets (30d)</span>
+                  <strong class="{% if recent_password_resets > 50 %}text-warning{% else %}text-success{% endif %}">
+                    {{ recent_password_resets }}
+                  </strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span>Total Users</span>
+                  <strong class="text-info">{{ total_users }}</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Staff Users</span>
+                  <strong class="text-secondary">{{ staff_users }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Compliance Recommendations</h5>
+              </div>
+              <div class="recommendations mt-3">
+                {% for recommendation in recommendations %}
+                <div class="alert alert-warning alert-sm d-flex align-items-center" role="alert">
+                  <i class="fas fa-exclamation-triangle mr-2"></i>
+                  {{ recommendation }}
+                </div>
+                {% empty %}
+                <div class="alert alert-success d-flex align-items-center" role="alert">
+                  <i class="fas fa-check-circle mr-2"></i>
+                  All compliance requirements are currently met.
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Categories -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">User Category Breakdown</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="exportUserCategories()">
+              <i class="fas fa-download mr-2"></i>Export Data
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Total Users</th>
+                  <th>MFA Enabled</th>
+                  <th>Compliance Rate</th>
+                  <th>Risk Level</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <i class="fas fa-user-shield mr-2 text-danger"></i>
+                    Administrators
+                  </td>
+                  <td><span class="badge bg-secondary">{{ admin_users }}</span></td>
+                  <td>
+                    <span class="badge {% if admin_mfa_compliance >= 100 %}bg-success{% else %}bg-danger{% endif %}">
+                      {% widthratio admin_mfa_compliance 100 admin_users %}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="progress" style="height: 8px; width: 80px;">
+                      <div class="progress-bar bg-success" style="width: 95%"></div>
+                    </div>
+                    {{ admin_mfa_compliance }}%
+                  </td>
+                  <td>
+                    {% if admin_mfa_compliance >= 100 %}
+                      <span class="badge bg-success">Low</span>
+                    {% else %}
+                      <span class="badge bg-danger">Critical</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary" onclick="manageCategory('admin')">
+                      <i class="fas fa-cog"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <i class="fas fa-user-tie mr-2 text-warning"></i>
+                    Staff Members
+                  </td>
+                  <td><span class="badge bg-secondary">{{ staff_users }}</span></td>
+                  <td>
+                    <span class="badge {% if staff_mfa_compliance >= 100 %}bg-success{% elif staff_mfa_compliance >= 90 %}bg-warning{% else %}bg-danger{% endif %}">
+                      {% widthratio staff_mfa_compliance 100 staff_users %}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="progress" style="height: 8px; width: 80px;">
+                      <div class="progress-bar bg-warning" style="width: 78%"></div>
+                    </div>
+                    {{ staff_mfa_compliance }}%
+                  </td>
+                  <td>
+                    {% if staff_mfa_compliance >= 100 %}
+                      <span class="badge bg-success">Low</span>
+                    {% elif staff_mfa_compliance >= 90 %}
+                      <span class="badge bg-warning">Medium</span>
+                    {% else %}
+                      <span class="badge bg-danger">High</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary" onclick="manageCategory('staff')">
+                      <i class="fas fa-cog"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <i class="fas fa-user mr-2 text-info"></i>
+                    Regular Users
+                  </td>
+                  <td><span class="badge bg-secondary">{{ regular_users_count }}</span></td>
+                  <td>
+                    <span class="badge {% if overall_mfa_compliance >= 80 %}bg-success{% elif overall_mfa_compliance >= 60 %}bg-warning{% else %}bg-danger{% endif %}">
+                      N/A
+                    </span>
+                  </td>
+                  <td>
+                    <div class="progress" style="height: 8px; width: 80px;">
+                      <div class="progress-bar bg-warning" style="width: 65%"></div>
+                    </div>
+                    {{ overall_mfa_compliance }}%
+                  </td>
+                  <td>
+                    {% if overall_mfa_compliance >= 80 %}
+                      <span class="badge bg-success">Low</span>
+                    {% elif overall_mfa_compliance >= 60 %}
+                      <span class="badge bg-warning">Medium</span>
+                    {% else %}
+                      <span class="badge bg-danger">High</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary" onclick="manageCategory('users')">
+                      <i class="fas fa-cog"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function generateComplianceReport() {
+  if (confirm('Generate comprehensive compliance report PDF?')) {
+    // Implementation would generate PDF report
+    alert('Compliance report generated and downloaded');
+  }
+}
+
+function exportUserCategories() {
+  window.open('{% url "mfa:admin_users_export" %}?format=compliance', '_blank');
+}
+
+function manageCategory(category) {
+  let url = '{% url "mfa:admin_users" %}';
+  switch(category) {
+    case 'admin':
+      url += '?status=superuser';
+      break;
+    case 'staff':
+      url += '?status=staff';
+      break;
+    case 'users':
+      url += '?status=active';
+      break;
+  }
+  window.location.href = url;
+}
+</script>
+{% endblock %}

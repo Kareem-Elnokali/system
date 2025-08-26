@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
+    <style>
+        body {
+            font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border: 1px solid #dddddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .email-header {
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-family: 'Lora', Georgia, serif;
+            font-size: 24px;
+        }
+        .email-body {
+            padding: 30px;
+            color: #333333;
+            line-height: 1.6;
+        }
+        .email-footer {
+            background-color: #f4f4f4;
+            color: #888888;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .button {
+            display: inline-block;
+            color: #ffffff;
+            padding: 12px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        .code {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            letter-spacing: 4px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+</style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header" style="background-color: {{ brand_color|default:'#55833d' }};">
+            <h1>{{ site_name }}</h1>
+        </div>
+        <div class="email-body">
+            {% block content %}
+            <p>This is a default email content. Please override this block.</p>
+            {% endblock %}
+        </div>
+        <div class="email-footer">
+            {% if safety_phrase %}
+            <p style="margin-top:0;">Security Key: <strong>{{ safety_phrase }}</strong></p>
+            <p style="margin:6px 0 0; color:#999;">It must match the key on our site. If it doesn’t match, stop — it may be a fake email.</p>
+            {% endif %}
+            <p>&copy; {% now "Y" %} {{ site_name }}. All rights reserved.</p>
+            <p>This is an automated message, please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>

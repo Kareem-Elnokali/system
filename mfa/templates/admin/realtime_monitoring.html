@@ -1,0 +1,1222 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Real-Time Monitoring - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Live Monitoring{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+{% endblock %}
+{% block admin_content %}
+<div class="container py-5 admin-dashboard">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <!-- Hero Section -->
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Live Monitoring</span>
+                <h1 class="display-4 mb-3">
+                  <i class="fas fa-broadcast-tower mr-3"></i>Real-Time Security Center
+                </h1>
+                <p class="text-white-75 mb-0">Monitor authentication events, threats, and system health in real-time.</p>
+                <div class="mt-3">
+                  <span class="badge bg-success mr-2">
+                    <i class="fas fa-circle pulse-dot mr-1"></i>Live Feed Active
+                  </span>
+                  <span id="connection-status" class="badge bg-secondary">
+                    <i class="fas fa-plug mr-1"></i>Connecting...
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced System Health Cards -->
+      <div class="row g-3 stats-cards-row mt-3">
+        <div class="col-6 col-lg-2">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">System Status</div>
+              <div id="system-health" class="display-6 text-success">
+                <i class="fas fa-check-circle"></i>
+              </div>
+              <div class="small text-success">Healthy</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Active Sessions</div>
+              <div id="active-sessions" class="display-6">0</div>
+              <div class="small text-info">Online Users</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Events/Min</div>
+              <div id="events-per-minute" class="display-6">0</div>
+              <div class="small text-primary">Live Rate</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Response Time</div>
+              <div id="avg-response-time" class="display-6 text-info">0ms</div>
+              <div class="small text-muted">Average</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Success Rate</div>
+              <div id="success-rate" class="display-6 text-success">0%</div>
+              <div class="small text-muted">Last Hour</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-2">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Threat Level</div>
+              <div id="threat-level" class="display-6 text-success">
+                <i class="fas fa-shield-alt"></i>
+              </div>
+              <div class="small text-success">Low</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert Panel -->
+      <div id="alert-panel" class="card shadow-sm mt-4 rounded-3" style="display: none;">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0 text-danger">
+              <i class="fas fa-exclamation-triangle mr-2"></i>Security Alerts
+            </h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="clearAlerts()">
+              <i class="fas fa-times mr-1"></i>Clear All
+            </button>
+          </div>
+          <div id="alerts-container"></div>
+        </div>
+      </div>
+
+      <!-- Real-time Analytics Dashboard -->
+      <div class="row mt-4">
+        <div class="col-lg-8">
+          <!-- Live Activity Feed -->
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                  <h5 class="mb-0">
+                    <i class="fas fa-stream mr-2"></i>Live Activity Feed
+                  </h5>
+                  <div class="d-flex flex-wrap justify-content-center justify-content-md-right align-items-center mt-2 mt-md-0" style="gap: 0.5rem;">
+                    <div class="btn-group btn-group-sm mr-3" role="group">
+                      <button id="filter-all" class="btn btn-outline-secondary active d-flex justify-content-center align-items-center" data-filter="all" style="min-width: 60px;">
+                        <span class="d-none d-md-inline">All</span><i class="fas fa-list d-md-none"></i>
+                      </button>
+                      <button id="filter-success" class="btn btn-outline-success d-flex justify-content-center align-items-center" data-filter="success" style="min-width: 60px;">
+                        <span class="d-none d-md-inline">Success</span><i class="fas fa-check d-md-none"></i>
+                      </button>
+                      <button id="filter-failure" class="btn btn-outline-danger d-flex justify-content-center align-items-center" data-filter="failure" style="min-width: 60px;">
+                        <span class="d-none d-md-inline">Failures</span><i class="fas fa-times d-md-none"></i>
+                      </button>
+                      <button id="filter-warning" class="btn btn-outline-warning d-flex justify-content-center align-items-center" data-filter="warning" style="min-width: 60px;">
+                        <span class="d-none d-md-inline">Warnings</span><i class="fas fa-exclamation-triangle d-md-none"></i>
+                      </button>
+                    </div>
+                    <div class="d-flex" style="gap: 0.5rem;">
+                      <button id="pause-feed" class="btn btn-sm btn-outline-primary d-flex justify-content-center align-items-center" style="min-width: 60px;">
+                        <i class="fas fa-pause"></i><span class="d-none d-md-inline ml-1">Pause</span>
+                      </button>
+                      <button id="clear-feed" class="btn btn-sm btn-outline-secondary d-flex justify-content-center align-items-center" style="min-width: 60px;">
+                        <i class="fas fa-trash"></i><span class="d-none d-md-inline ml-1">Clear</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3">
+                <div id="activity-feed" class="activity-feed-container">
+                  <div class="text-center text-muted py-4">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>Waiting for live events...
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <!-- Live Statistics Panel -->
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="card-title">
+                <i class="fas fa-chart-bar mr-2"></i>Live Statistics
+              </h5>
+              <div class="stats-panel">
+                <div class="stat-item">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted">Events Today</span>
+                    <span id="events-today" class="badge bg-primary">0</span>
+                  </div>
+                  <div class="progress" style="height: 4px;">
+                    <div id="events-today-bar" class="progress-bar bg-primary" style="width: 0%"></div>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted">Unique Users</span>
+                    <span id="unique-users" class="badge bg-info">0</span>
+                  </div>
+                  <div class="progress" style="height: 4px;">
+                    <div id="unique-users-bar" class="progress-bar bg-info" style="width: 0%"></div>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted">Peak Hour</span>
+                    <span id="peak-hour" class="text-success">--:--</span>
+                  </div>
+                </div>
+                <div class="stat-item">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted">Most Active Method</span>
+                    <span id="top-method" class="badge bg-success">None</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Geographic Activity -->
+          <div class="card shadow-sm rounded-3 mt-3">
+            <div class="card-body">
+              <h5 class="card-title">
+                <i class="fas fa-globe mr-2"></i>Geographic Activity
+              </h5>
+              <div id="geographic-activity">
+                <!-- Geographic data will be populated by WebSocket -->
+                <div class="text-center text-muted py-3">
+                  <i class="fas fa-spinner fa-spin mr-2"></i>Loading geographic data...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced System Health & Performance -->
+      <div class="row mt-4">
+        <div class="col-lg-4">
+          <div class="card shadow-sm h-100 rounded-3">
+            <div class="card-body">
+              <h5 class="card-title">
+                <i class="fas fa-database mr-2"></i>Database Health
+              </h5>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Connection</span>
+                <span id="db-status" class="badge bg-success">Connected</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Query Time</span>
+                <span id="db-query-time" class="text-success">< 10ms</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Active Connections</span>
+                <span id="db-connections" class="text-info">2/100</span>
+              </div>
+              <div class="mt-3">
+                <canvas id="db-performance-chart" width="200" height="100"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card shadow-sm h-100 rounded-3">
+            <div class="card-body">
+              <h5 class="card-title">
+                <i class="fas fa-memory mr-2"></i>Cache Health
+              </h5>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Status</span>
+                <span id="cache-status" class="badge bg-success">Active</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Hit Rate</span>
+                <span id="cache-hit-rate" class="text-success">98.5%</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Memory Usage</span>
+                <span id="cache-memory" class="text-info">45MB/512MB</span>
+              </div>
+              <div class="mt-3">
+                <canvas id="cache-performance-chart" width="200" height="100"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card shadow-sm h-100 rounded-3">
+            <div class="card-body">
+              <h5 class="card-title">
+                <i class="fas fa-tachometer-alt mr-2"></i>Performance Metrics
+              </h5>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">CPU Usage</span>
+                <span id="cpu-usage" class="text-info">25%</span>
+              </div>
+              <div class="progress mb-3" style="height: 6px;">
+                <div id="cpu-usage-bar" class="progress-bar bg-info" style="width: 25%"></div>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Memory Usage</span>
+                <span id="memory-usage" class="text-warning">68%</span>
+              </div>
+              <div class="progress mb-3" style="height: 6px;">
+                <div id="memory-usage-bar" class="progress-bar bg-warning" style="width: 68%"></div>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-muted">Network I/O</span>
+                <span id="network-io" class="text-success">Low</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threat Detection -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="fas fa-shield-alt mr-2"></i>Threat Detection
+            </h5>
+            <div class="badge bg-success">
+              <i class="fas fa-eye mr-1"></i>Monitoring
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-4">
+              <div class="threat-metric">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="text-muted">Failed Login Attempts</span>
+                  <span id="failed-logins" class="badge bg-warning">0</span>
+                </div>
+                <div class="progress mt-2" style="height: 6px;">
+                  <div id="failed-logins-bar" class="progress-bar bg-warning" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="threat-metric">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="text-muted">Suspicious IPs</span>
+                  <span id="suspicious-ips" class="badge bg-danger">0</span>
+                </div>
+                <div class="progress mt-2" style="height: 6px;">
+                  <div id="suspicious-ips-bar" class="progress-bar bg-danger" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="threat-metric">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="text-muted">Rate Limit Hits</span>
+                  <span id="rate-limits" class="badge bg-info">0</span>
+                </div>
+                <div class="progress mt-2" style="height: 6px;">
+                  <div id="rate-limits-bar" class="progress-bar bg-info" style="width: 0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Pulse animation for live indicator */
+.pulse-dot {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* Activity feed styles */
+.activity-feed-container {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.activity-item {
+  padding: 12px;
+  border-bottom: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+  opacity: 1;
+}
+
+.activity-item:hover {
+  background-color: #f8f9fa;
+  transform: translateX(2px);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.stat-item {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+}
+
+.geo-item {
+  margin-bottom: 1rem;
+}
+
+.progress {
+  border-radius: 10px;
+}
+
+.progress-bar {
+  border-radius: 10px;
+  transition: width 0.6s ease;
+}
+
+.card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+
+.btn-group .btn {
+  transition: all 0.2s ease;
+}
+
+.badge {
+  font-size: 0.75em;
+  padding: 0.35em 0.65em;
+}
+
+.activity-item.new {
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196f3;
+}
+
+.threat-metric {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #f44336;
+  background: #ffebee;
+  animation: slideIn 0.3s ease-out;
+}
+
+.section-header {
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.stats-cards-row .card {
+  border: none;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+}
+
+.display-6 {
+  font-weight: 600;
+}
+
+canvas {
+  max-height: 100px;
+}
+</style>
+
+<script>
+let socket = null;
+let isPaused = false;
+let eventCount = 0;
+let eventsPerMinute = 0;
+let lastMinuteEvents = [];
+let reconnectAttempts = 0;
+const maxReconnectAttempts = 5;
+let currentFilter = 'all';
+
+// Chart instances
+let dbChart = null;
+let cacheChart = null;
+let eventsChart = null;
+
+// Statistics tracking
+let dailyStats = {
+  eventsToday: 0,
+  uniqueUsers: new Set(),
+  peakHour: null,
+  methodCounts: {},
+  hourlyEvents: new Array(24).fill(0)
+};
+
+// Data persistence
+let persistedData = {
+  systemHealth: null,
+  recentEvents: [],
+  lastUpdate: null
+};
+
+// Load persisted data from localStorage
+function loadPersistedData() {
+  try {
+    const stored = localStorage.getItem('mfa_realtime_data');
+    if (stored) {
+      persistedData = JSON.parse(stored);
+      // Restore data if it's recent (within last 5 minutes)
+      if (persistedData.lastUpdate && 
+          (Date.now() - new Date(persistedData.lastUpdate).getTime()) < 300000) {
+        if (persistedData.systemHealth) {
+          updateSystemHealthDisplay(persistedData.systemHealth);
+        }
+        if (persistedData.recentEvents && persistedData.recentEvents.length > 0) {
+          loadRecentEvents(persistedData.recentEvents);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error loading persisted data:', e);
+  }
+}
+
+// Save data to localStorage
+function persistData(type, data) {
+  try {
+    if (type === 'system_health') {
+      persistedData.systemHealth = data;
+    } else if (type === 'recent_events') {
+      persistedData.recentEvents = data;
+    }
+    persistedData.lastUpdate = new Date().toISOString();
+    localStorage.setItem('mfa_realtime_data', JSON.stringify(persistedData));
+  } catch (e) {
+    console.error('Error persisting data:', e);
+  }
+}
+
+function initializeMonitoring() {
+  // Use AJAX polling instead of WebSocket for real-time updates
+  loadInitialData();
+  
+  // Update every 5 seconds
+  setInterval(loadLiveData, 5000);
+  
+  // Update events per minute counter
+  setInterval(updateEventsPerMinute, 1000);
+}
+
+function loadInitialData() {
+  // Load initial activity feed
+  fetch('/mfa/admin/ajax/live-activity-feed/')
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        loadRecentEvents(data.activities);
+      }
+    })
+    .catch(error => console.error('Error loading initial data:', error));
+
+  // Load initial system stats
+  loadLiveData();
+}
+
+function loadLiveData() {
+  // Load system statistics
+  fetch('/mfa/admin/ajax/live-system-stats/')
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        updateSystemStats(data.stats);
+      }
+    })
+    .catch(error => console.error('Error loading system stats:', error));
+
+  // Load activity feed
+  fetch('/mfa/admin/ajax/live-activity-feed/')
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.activities.length > 0) {
+        updateActivityFeed(data.activities);
+      }
+    })
+    .catch(error => console.error('Error loading activity feed:', error));
+}
+
+function connectWebSocket() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/realtime-monitoring/`;
+
+  console.log('Attempting WebSocket connection to:', wsUrl);
+  updateConnectionStatus('connecting');
+
+  socket = new WebSocket(wsUrl);
+
+  socket.onopen = function(e) {
+    console.log('WebSocket connected');
+    updateConnectionStatus('connected');
+    reconnectAttempts = 0;
+
+    // Request initial data
+    socket.send(JSON.stringify({
+      'type': 'get_system_health'
+    }));
+
+    socket.send(JSON.stringify({
+      'type': 'get_recent_events'
+    }));
+  };
+
+  socket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+
+    if (data.type === 'mfa_event') {
+      if (!isPaused) {
+        addActivityItem(data.event);
+        eventCount++;
+        lastMinuteEvents.push(Date.now());
+
+        // Check for threats
+        if (data.event.type === 'failure' || data.event.type === 'warning') {
+          checkForThreats(data.event);
+        }
+      }
+    } else if (data.type === 'system_health') {
+      updateSystemHealthDisplay(data.data);
+      persistData('system_health', data.data);
+    } else if (data.type === 'recent_events') {
+      loadRecentEvents(data.data);
+      persistData('recent_events', data.data);
+    }
+  };
+
+  socket.onclose = function(e) {
+    console.log('WebSocket disconnected. Code:', e.code, 'Reason:', e.reason);
+    updateConnectionStatus('disconnected');
+
+    // Attempt to reconnect with exponential backoff
+    if (reconnectAttempts < maxReconnectAttempts) {
+      const delay = Math.pow(2, reconnectAttempts) * 1000; // 1s, 2s, 4s, 8s, 16s
+      reconnectAttempts++;
+      console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+      
+      setTimeout(() => {
+        if (socket.readyState === WebSocket.CLOSED) {
+          connectWebSocket();
+        }
+      }, delay);
+    } else {
+      console.error('Max reconnection attempts reached');
+      updateConnectionStatus('error');
+    }
+  };
+
+  socket.onerror = function(e) {
+    console.error('WebSocket error:', e);
+    updateConnectionStatus('error');
+  };
+}
+
+function updateConnectionStatus(status) {
+  const statusEl = document.getElementById('connection-status');
+  if (status === 'connected') {
+    statusEl.innerHTML = '<i class="fas fa-wifi mr-1"></i>Connected';
+    statusEl.className = 'badge bg-success';
+  } else if (status === 'connecting') {
+    statusEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Connecting...';
+    statusEl.className = 'badge bg-warning';
+  } else if (status === 'error') {
+    statusEl.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>Error';
+    statusEl.className = 'badge bg-danger';
+  } else {
+    statusEl.innerHTML = '<i class="fas fa-times mr-1"></i>Disconnected';
+    statusEl.className = 'badge bg-danger';
+  }
+}
+
+function loadRecentEvents(events) {
+  if (!events || events.length === 0) return;
+  
+  const feed = document.getElementById('activity-feed');
+  
+  // Clear existing content including placeholder
+  feed.innerHTML = '';
+  
+  events.forEach(event => {
+    // Convert the event data to match expected format
+    const normalizedStatus = event.status === 'danger' ? 'failure' : event.status;
+    const formattedEvent = {
+      type: event.type,
+      message: event.message,
+      timestamp: event.timestamp,
+      status: normalizedStatus,
+      success: normalizedStatus === 'success'
+    };
+    addActivityItem(formattedEvent);
+  });
+}
+
+function updateActivityFeed(activities) {
+  if (!activities || activities.length === 0) return;
+  
+  const feed = document.getElementById('activity-feed');
+  
+  // Only add new activities that aren't already displayed
+  activities.forEach(activity => {
+    const existingItems = Array.from(feed.children);
+    const exists = existingItems.some(item => 
+      item.getAttribute('data-ts') === activity.timestamp &&
+      item.getAttribute('data-message') === activity.message
+    );
+    
+    if (!exists) {
+      const normalizedStatus = activity.status === 'danger' ? 'failure' : activity.status;
+      const formattedEvent = {
+        type: activity.type,
+        message: activity.message,
+        timestamp: activity.timestamp,
+        status: normalizedStatus,
+        success: normalizedStatus === 'success'
+      };
+      addActivityItem(formattedEvent);
+    }
+  });
+}
+
+function updateSystemStats(stats) {
+  // Update active sessions
+  document.getElementById('active-sessions').textContent = stats.active_sessions || 0;
+  
+  // Update threat level
+  const threatLevel = document.getElementById('threat-level');
+  const threatText = threatLevel.nextElementSibling;
+  
+  if (stats.active_threats > 10) {
+    threatLevel.innerHTML = '<i class="fas fa-shield-alt"></i>';
+    threatLevel.className = 'display-6 text-danger';
+    threatText.textContent = 'High';
+    threatText.className = 'small text-danger';
+  } else if (stats.active_threats > 5) {
+    threatLevel.innerHTML = '<i class="fas fa-shield-alt"></i>';
+    threatLevel.className = 'display-6 text-warning';
+    threatText.textContent = 'Medium';
+    threatText.className = 'small text-warning';
+  } else {
+    threatLevel.innerHTML = '<i class="fas fa-shield-alt"></i>';
+    threatLevel.className = 'display-6 text-success';
+    threatText.textContent = 'Low';
+    threatText.className = 'small text-success';
+  }
+  
+  // Update API health
+  const apiHealth = document.getElementById('success-rate');
+  apiHealth.textContent = stats.api_health + '%';
+  
+  // Update system health
+  const systemHealth = document.getElementById('system-health');
+  const systemText = systemHealth.nextElementSibling;
+  
+  if (stats.system_health === 'Healthy') {
+    systemHealth.innerHTML = '<i class="fas fa-check-circle"></i>';
+    systemHealth.className = 'display-6 text-success';
+    systemText.textContent = 'Healthy';
+    systemText.className = 'small text-success';
+  } else {
+    systemHealth.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+    systemHealth.className = 'display-6 text-warning';
+    systemText.textContent = 'Issues';
+    systemText.className = 'small text-warning';
+  }
+  
+  // Update connection status
+  updateConnectionStatus('connected');
+}
+
+function updateSystemHealthDisplay(healthData) {
+  // Update active sessions
+  document.getElementById('active-sessions').textContent = healthData.active_sessions || 0;
+
+  // Update database status
+  const dbStatus = document.getElementById('db-status');
+  if (healthData.db_healthy) {
+    dbStatus.textContent = 'Connected';
+    dbStatus.className = 'badge bg-success';
+  } else {
+    dbStatus.textContent = 'Error';
+    dbStatus.className = 'badge bg-danger';
+  }
+
+  // Update query time
+  document.getElementById('db-query-time').textContent = `< ${healthData.db_query_time}ms`;
+
+  // Update cache status
+  const cacheStatus = document.getElementById('cache-status');
+  if (healthData.cache_healthy) {
+    cacheStatus.textContent = 'Active';
+    cacheStatus.className = 'badge bg-success';
+  } else {
+    cacheStatus.textContent = 'Error';
+    cacheStatus.className = 'badge bg-danger';
+  }
+
+  // Update events today and unique users
+  document.getElementById('events-today').textContent = healthData.events_today || 0;
+  document.getElementById('unique-users-today').textContent = healthData.unique_users_today || 0;
+
+  // Update success rate
+  document.getElementById('success-rate').textContent = (healthData.success_rate || 0) + '%';
+  document.getElementById('success-rate-bar').style.width = (healthData.success_rate || 0) + '%';
+
+  // Update geographic activity with real data
+  updateGeographicActivity(healthData);
+}
+
+function updateGeographicActivity(healthData) {
+  const container = document.getElementById('geographic-activity');
+  if (!healthData.geographic_data) return;
+  
+  const locations = healthData.geographic_data;
+  const total = Object.values(locations).reduce((sum, count) => sum + count, 0);
+  
+  if (total === 0) {
+    container.innerHTML = '<div class="text-center text-muted py-3">No geographic data available</div>';
+    return;
+  }
+  
+  let html = '';
+  Object.entries(locations).forEach(([location, count]) => {
+    const percentage = Math.round((count / total) * 100);
+    const badgeClass = location.includes('Local') ? 'success' : 
+                      location.includes('Suspicious') ? 'danger' : 'warning';
+    
+    html += `
+      <div class="geo-item mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted"><i class="fas fa-map-marker-alt mr-1"></i>${location}</span>
+          <span class="badge bg-${badgeClass}">${percentage}%</span>
+        </div>
+        <div class="progress" style="height: 6px;">
+          <div class="progress-bar bg-${badgeClass}" style="width: ${percentage}%"></div>
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+
+  // Update threat metrics
+  document.getElementById('failed-logins').textContent = healthData.failed_logins || 0;
+  document.getElementById('failed-logins-bar').style.width = Math.min((healthData.failed_logins || 0) * 10, 100) + '%';
+
+  document.getElementById('suspicious-ips').textContent = healthData.suspicious_ips || 0;
+  document.getElementById('suspicious-ips-bar').style.width = Math.min((healthData.suspicious_ips || 0) * 20, 100) + '%';
+
+  // Update system health indicator
+  const systemHealth = document.getElementById('system-health');
+  if (healthData.db_healthy && healthData.cache_healthy) {
+    systemHealth.innerHTML = '<i class="fas fa-check-circle"></i>';
+    systemHealth.className = 'display-6 text-success';
+    systemHealth.nextElementSibling.textContent = 'Healthy';
+    systemHealth.nextElementSibling.className = 'small text-success';
+  } else {
+    systemHealth.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+    systemHealth.className = 'display-6 text-warning';
+    systemHealth.nextElementSibling.textContent = 'Issues';
+    systemHealth.nextElementSibling.className = 'small text-warning';
+  }
+}
+
+function addActivityItem(event, animate = true) {
+  if (isPaused) return;
+
+  const feed = document.getElementById('activity-feed');
+  const item = document.createElement('div');
+  item.className = 'activity-item';
+
+  const timestamp = event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+  const normalizedStatus = event.status === 'danger' ? 'failure' : event.status;
+  const statusClass = normalizedStatus === 'success' ? 'success' : normalizedStatus === 'failure' ? 'danger' : 'warning';
+  const icon = normalizedStatus === 'success' ? 'check-circle' : normalizedStatus === 'failure' ? 'times-circle' : 'exclamation-triangle';
+  const eventType = normalizedStatus;
+
+  // Set data attribute for filtering
+  item.setAttribute('data-filter', eventType);
+  // Set data attributes for deduplication
+  if (event.timestamp) item.setAttribute('data-ts', event.timestamp);
+  if (event.message) item.setAttribute('data-message', event.message);
+
+  item.innerHTML = `
+    <div class="d-flex justify-content-between align-items-start">
+      <div class="d-flex align-items-start">
+        <i class="fas fa-${icon} text-${statusClass} mr-2 mt-1"></i>
+        <div>
+          <div class="fw-bold">${event.message || 'System Event'}</div>
+          <div class="text-muted small">${event.type || 'Unknown Type'}</div>
+        </div>
+      </div>
+      <div class="text-end">
+        <span class="badge bg-${statusClass}">${event.status.charAt(0).toUpperCase() + event.status.slice(1)}</span>
+        <div class="text-muted small mt-1">${timestamp}</div>
+      </div>
+    </div>
+  `;
+
+  // Remove placeholder if it exists
+  const placeholder = feed.querySelector('.text-center');
+  if (placeholder) {
+    placeholder.remove();
+  }
+
+  // Apply current filter
+  if (currentFilter !== 'all' && eventType !== currentFilter) {
+    item.style.display = 'none';
+  }
+
+  feed.insertBefore(item, feed.firstChild);
+
+  // Keep only last 100 items
+  while (feed.children.length > 100) {
+    feed.removeChild(feed.lastChild);
+  }
+
+  // Update statistics
+  updateStatistics(event);
+  eventCount++;
+  updateEventsPerMinute();
+}
+
+function updateStatistics(event) {
+  // Update daily stats
+  dailyStats.eventsToday++;
+  if (event.user) {
+    dailyStats.uniqueUsers.add(event.user);
+  }
+
+  // Track method usage
+  const method = event.method || 'Unknown';
+  dailyStats.methodCounts[method] = (dailyStats.methodCounts[method] || 0) + 1;
+
+  // Update hourly tracking
+  const hour = new Date().getHours();
+  dailyStats.hourlyEvents[hour]++;
+
+  // Find peak hour
+  const maxEvents = Math.max(...dailyStats.hourlyEvents);
+  const peakHourIndex = dailyStats.hourlyEvents.indexOf(maxEvents);
+  dailyStats.peakHour = `${peakHourIndex.toString().padStart(2, '0')}:00`;
+
+  // Find most active method
+  const topMethod = Object.keys(dailyStats.methodCounts).reduce((a, b) =>
+    dailyStats.methodCounts[a] > dailyStats.methodCounts[b] ? a : b, 'Email OTP'
+  );
+
+  // Update UI
+  document.getElementById('events-today').textContent = dailyStats.eventsToday;
+  document.getElementById('unique-users').textContent = dailyStats.uniqueUsers.size;
+  document.getElementById('peak-hour').textContent = dailyStats.peakHour || '--:--';
+  document.getElementById('top-method').textContent = topMethod;
+
+  // Update progress bars
+  const maxDaily = 1000; // Assume max 1000 events per day
+  const eventsPercent = Math.min((dailyStats.eventsToday / maxDaily) * 100, 100);
+  document.getElementById('events-today-bar').style.width = `${eventsPercent}%`;
+
+  const maxUsers = 100; // Assume max 100 unique users
+  const usersPercent = Math.min((dailyStats.uniqueUsers.size / maxUsers) * 100, 100);
+  document.getElementById('unique-users-bar').style.width = `${usersPercent}%`;
+}
+
+function updateEventsPerMinute() {
+  const now = Date.now();
+  lastMinuteEvents.push(now);
+
+  // Remove events older than 1 minute
+  lastMinuteEvents = lastMinuteEvents.filter(time => now - time < 60000);
+
+  eventsPerMinute = lastMinuteEvents.length;
+  document.getElementById('events-per-minute').textContent = eventsPerMinute;
+}
+
+function updateMetrics() {
+  // Update active sessions (simulate)
+  const sessions = 15 + Math.floor(Math.random() * 10);
+  document.getElementById('active-sessions').textContent = sessions;
+}
+
+function updateSystemHealth() {
+  // Simulate system health checks
+  const dbQueryTime = Math.floor(Math.random() * 20) + 5;
+  document.getElementById('db-query-time').textContent = `< ${dbQueryTime}ms`;
+
+  const cacheHitRate = (95 + Math.random() * 4).toFixed(1);
+  document.getElementById('cache-hit-rate').textContent = `${cacheHitRate}%`;
+
+  const cacheMemory = Math.floor(40 + Math.random() * 20);
+  document.getElementById('cache-memory').textContent = `${cacheMemory}MB/512MB`;
+}
+
+function checkForThreats(event) {
+  // Simulate threat detection
+  if (event.type === 'failure') {
+    const currentFailed = parseInt(document.getElementById('failed-logins').textContent) + 1;
+    document.getElementById('failed-logins').textContent = currentFailed;
+    document.getElementById('failed-logins-bar').style.width = Math.min(currentFailed * 10, 100) + '%';
+
+    if (currentFailed > 5) {
+      showAlert('warning', `High number of failed login attempts detected: ${currentFailed}`);
+    }
+  }
+
+  if (event.type === 'warning') {
+    const currentRateLimit = parseInt(document.getElementById('rate-limits').textContent) + 1;
+    document.getElementById('rate-limits').textContent = currentRateLimit;
+    document.getElementById('rate-limits-bar').style.width = Math.min(currentRateLimit * 20, 100) + '%';
+  }
+}
+
+function showAlert(level, message) {
+  const alertPanel = document.getElementById('alert-panel');
+  const container = document.getElementById('alerts-container');
+
+  const alert = document.createElement('div');
+  alert.className = `alert-item ${level}`;
+  alert.innerHTML = `
+    <div class="d-flex justify-content-between align-items-start">
+      <div>
+        <strong>${level.toUpperCase()}:</strong> ${message}
+      </div>
+      <button class="btn btn-sm btn-link p-0 ml-2" onclick="this.parentElement.parentElement.remove()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="small text-muted mt-1">${new Date().toLocaleString()}</div>
+  `;
+
+  container.insertBefore(alert, container.firstChild);
+  alertPanel.style.display = 'block';
+
+  // Auto-remove after 30 seconds
+  setTimeout(() => {
+    if (alert.parentElement) {
+      alert.remove();
+      if (container.children.length === 0) {
+        alertPanel.style.display = 'none';
+        eventCount = 0;
+        eventsPerMinute = 0;
+        lastMinuteEvents = [];
+        document.getElementById('events-per-minute').textContent = '0';
+      }
+    }
+  }, 30000);
+}
+
+function clearAlerts() {
+  document.getElementById('alerts-container').innerHTML = '';
+  document.getElementById('alert-panel').style.display = 'none';
+}
+
+// Control functions
+document.getElementById('pause-feed').addEventListener('click', function() {
+  isPaused = !isPaused;
+  if (isPaused) {
+    this.innerHTML = '<i class="fas fa-play"></i><span class="d-none d-md-inline ml-1">Resume</span>';
+    this.className = 'btn btn-sm btn-success';
+  } else {
+    this.innerHTML = '<i class="fas fa-pause"></i><span class="d-none d-md-inline ml-1">Pause</span>';
+    this.className = 'btn btn-sm btn-outline-primary';
+  }
+});
+
+document.getElementById('clear-feed').addEventListener('click', function() {
+  const feed = document.getElementById('activity-feed');
+  feed.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-broom mr-2"></i>Activity feed cleared</div>';
+  eventCount = 0;
+  eventsPerMinute = 0;
+  lastMinuteEvents = [];
+  document.getElementById('events-per-minute').textContent = '0';
+});
+
+// Filter functionality
+document.querySelectorAll('[data-filter]').forEach(btn => {
+  btn.addEventListener('click', function() {
+    // Update active button
+    document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    
+    currentFilter = this.getAttribute('data-filter');
+    
+    // Filter activity items
+    const items = document.querySelectorAll('.activity-item');
+    items.forEach(item => {
+      if (currentFilter === 'all' || item.getAttribute('data-filter') === currentFilter) {
+        item.style.display = 'block';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+  });
+});
+
+// Initialize charts
+function initializeCharts() {
+  // Destroy existing charts if they exist
+  if (dbChart) {
+    dbChart.destroy();
+    dbChart = null;
+  }
+  if (cacheChart) {
+    cacheChart.destroy();
+    cacheChart = null;
+  }
+  
+  // Database performance chart
+  const dbCtx = document.getElementById('db-performance-chart').getContext('2d');
+  dbChart = new Chart(dbCtx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'Query Time (ms)',
+        data: [],
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+    }
+  });
+  
+  // Cache performance chart
+  const cacheCtx = document.getElementById('cache-performance-chart').getContext('2d');
+  cacheChart = new Chart(cacheCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Hit', 'Miss'],
+      datasets: [{
+        data: [98.5, 1.5],
+        backgroundColor: [
+          'rgb(40, 167, 69)',
+          'rgb(220, 53, 69)'
+        ]
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            boxWidth: 12,
+            font: {
+              size: 10
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Update performance metrics
+function updatePerformanceMetrics() {
+  // Simulate real-time performance data
+  const cpuUsage = Math.floor(Math.random() * 30) + 20; // 20-50%
+  const memoryUsage = Math.floor(Math.random() * 20) + 60; // 60-80%
+  const responseTime = Math.floor(Math.random() * 50) + 30; // 30-80ms
+  const successRate = (Math.random() * 2 + 97).toFixed(1); // 97-99%
+  
+  // Update UI
+  document.getElementById('cpu-usage').textContent = `${cpuUsage}%`;
+  document.getElementById('cpu-usage-bar').style.width = `${cpuUsage}%`;
+  document.getElementById('memory-usage').textContent = `${memoryUsage}%`;
+  document.getElementById('memory-usage-bar').style.width = `${memoryUsage}%`;
+  document.getElementById('avg-response-time').textContent = `${responseTime}ms`;
+  document.getElementById('success-rate').textContent = `${successRate}%`;
+  
+  // Update database chart
+  if (dbChart) {
+    const now = new Date().toLocaleTimeString();
+    dbChart.data.labels.push(now);
+    dbChart.data.datasets[0].data.push(responseTime);
+    
+    // Keep only last 20 data points
+    if (dbChart.data.labels.length > 20) {
+      dbChart.data.labels.shift();
+      dbChart.data.datasets[0].data.shift();
+    }
+    
+    dbChart.update('none');
+  }
+  
+  // Update cache chart
+  if (cacheChart) {
+    const hitRate = parseFloat(successRate);
+    cacheChart.data.datasets[0].data = [hitRate, 100 - hitRate];
+    cacheChart.update('none');
+  }
+}
+
+// Initialize connection when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  loadPersistedData(); // Load any persisted data first
+  initializeMonitoring();
+  updateEventCounts();
+  
+  // Set up periodic updates for event counts
+  setInterval(updateEventCounts, 5000);
+  
+  // Initialize charts after Chart.js loads
+  if (typeof Chart !== 'undefined') {
+    setTimeout(initializeCharts, 200); // Small delay to ensure DOM is ready
+  } else {
+    console.warn('Chart.js not loaded');
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends 'mfa/base.html' %}
+{% load static %}
+{% load socialaccount %}
+{% block title %}Login - {{ site_name }}{% endblock %}
+{% block content %}
+  {% include 'partials/navbar.html' %}
+  <section class="auth-hero py-5 py-lg-5">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-12">
+          <div class="glass-frame hero-unified">
+            <div class="row align-items-stretch no-gutters">
+              <div class="col-lg-6 d-none d-lg-block d-flex pr-lg-0">
+                <div class="auth-hero-copy frame-panel-left gradient-hero no-right-radius text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+                  <div class="hero-body">
+                    <span class="badge badge-pill mb-3">Welcome back</span>
+                    <h1 class="display-4 mb-3">Sign in to your <span class="text-white-75">account</span></h1>
+                    <p class="text-white-75 mb-4">Continue where you left off — secure, fast, and privacy-first.</p>
+                    <ul class="list-unstyled small text-white-50 mb-0">
+                      <li class="mb-2"><i class="fas fa-check mr-2 text-white"></i>Secure sessions & MFA</li>
+                      <li class="mb-2"><i class="fas fa-check mr-2 text-white"></i>Single sign-on available</li>
+                      <li><i class="fas fa-check mr-2 text-white"></i>Works on all your devices</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="col-lg-6 d-flex pl-lg-0">
+                <div class="frame-panel p-4 p-lg-4 signup-form-panel h-100 d-flex flex-column justify-content-center w-100">
+                  <div class="form-inner">
+                    <h2 class="h4 text-center mb-2 font-weight-bold"><span class="brand-color">L</span>ogin</h2>
+                    <p class="text-center text-muted mb-3">Use Google or your credentials</p>
+                    <div class="mb-3">
+                      {% include 'auth/google_button.html' with button_text="Sign in with Google" %}
+                    </div>
+                    <div class="d-flex align-items-center my-3">
+                      <div class="flex-grow-1 border-top"></div>
+                      <span class="mx-2 text-muted small">or</span>
+                      <div class="flex-grow-1 border-top"></div>
+                    </div>
+                    {% if messages %}
+                      {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} py-2 small" role="alert">{{ message }}</div>
+                      {% endfor %}
+                    {% endif %}
+                    <form method="post" novalidate data-captcha-error="Please complete the security check to continue.">
+                      {% csrf_token %}
+                      <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">Username or Email</label>
+                        <div class="input-group input-group-elevated">
+                          <div class="input-group-prepend">
+                            <span class="input-group-text" id="login-username-addon" aria-hidden="true"><i class="fa fa-user"></i></span>
+                          </div>
+                          <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" class="form-control" value="{{ form.username.value|default:'' }}" placeholder="Username or Email" autocomplete="username" aria-describedby="login-username-addon">
+                        </div>
+                        {% if form.username.errors %}
+                          <div class="text-danger small mt-1">{{ form.username.errors|striptags }}</div>
+                        {% endif %}
+                      </div>
+                      <div class="mb-3">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
+                        <div class="input-group input-group-elevated">
+                          <div class="input-group-prepend">
+                            <span class="input-group-text" id="login-password-addon" aria-hidden="true"><i class="fa fa-lock"></i></span>
+                          </div>
+                          <input type="password" name="{{ form.password.name }}" id="{{ form.password.id_for_label }}" class="form-control" placeholder="Password" autocomplete="current-password" aria-describedby="login-password-addon">
+                        </div>
+                        {% if form.password.errors %}
+                          <div class="text-danger small mt-1">{{ form.password.errors|striptags }}</div>
+                        {% endif %}
+                      </div>
+                      <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                        <label class="form-check-label" for="remember_me">Remember me</label>
+                      </div>
+                      {% if recaptcha_site_key %}
+                      <div class="mb-3" data-no-invalid-icon>
+                        <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+                        <div class="text-muted small mt-1">Security challenge enabled</div>
+                      </div>
+                      {% elif turnstile_site_key %}
+                      <div class="mb-3" data-no-invalid-icon>
+                        <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
+                      </div>
+                      {% endif %}
+                      <button type="submit" class="submitButton w-100">Login</button>
+                    </form>
+                    <div class="mt-3 auth-helper">
+                      <p class="mb-1 small">Don't have an account? <a class="brand-link" href="{% url 'mfa:signup' %}">Sign up</a></p>
+                      <p class="mb-1 small"><a class="brand-link" href="{% url 'mfa:password_reset' %}">Forgot password?</a></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% include 'partials/footer.html' %}
+  {% if recaptcha_site_key %}
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+  <noscript>
+    <div class="alert alert-warning mt-2">JavaScript is disabled; reCAPTCHA cannot load.</div>
+  </noscript>
+  {% elif turnstile_site_key %}
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  {% endif %}
+  <script>
+    (function() {
+      var form = document.querySelector('form');
+      if (!form) return;
+      function showClientError(input, message) {
+        input.classList.add('is-invalid');
+        var group = input.closest('.mb-3');
+        if (!group) return;
+        var holder = group.querySelector('.client-error');
+        if (!holder) {
+          holder = document.createElement('div');
+          holder.className = 'text-danger small client-error';
+          group.appendChild(holder);
+        }
+        holder.textContent = message;
+      }
+      function clearInvalid(input) {
+        input.classList.remove('is-invalid');
+        var group = input.closest('.mb-3');
+        if (group) {
+          var holder = group.querySelector('.client-error');
+          if (holder) holder.remove();
+        }
+      }
+      form.addEventListener('submit', function(e) {
+        var username = document.getElementById('id_username');
+        var password = document.getElementById('id_password');
+        var hasError = false;
+        [username, password].forEach(function(inp) {
+          if (!inp) return;
+          clearInvalid(inp);
+          if (!inp.value || inp.value.trim() === '') {
+            showClientError(inp, 'This field is required.');
+            hasError = true;
+          }
+        });
+        if (hasError) {
+          e.preventDefault();
+        }
+      });
+      document.addEventListener('input', function(e) {
+        if (e.target && e.target.matches('#id_username, #id_password')) {
+          clearInvalid(e.target);
+        }
+      });
+    })();
+  </script>
+{% endblock %}

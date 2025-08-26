@@ -1,0 +1,266 @@
+{% extends 'mfa/base.html' %}
+{% load static %}
+{% block title %}Verification - {{ site_name }}{% endblock %}
+{% block content %}
+    {% include 'partials/navbar.html' %}
+    <div class="container py-5">
+      <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-5">
+          <div class="card border shadow-lg p-4">
+            <h2 class="h2Title text-center mb-2" style="font-size: calc(1.9rem + 0.5vw) !important;"><span class="brand-color">V</span>erify your identity</h2>
+            <p class="text-center text-muted mb-4">Choose a method to confirm it's you.</p>
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} py-2 small" role="alert">{{ message }}</div>
+              {% endfor %}
+            {% endif %}
+            <div id="mfa-error-message" class="alert alert-danger py-2 small d-none" role="alert"></div>
+            <form method="post" class="d-flex flex-column gap-2">
+              {% if request.session.admin_mfa_flow %}<input type="hidden" name="admin_flow" value="1">{% endif %}
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.GET.next|urlencode }}">
+              <div class="list-group">
+                {% for method in available_methods %}
+                  {% if method.id == 'email' %}
+                    <button type="submit" name="method" value="email"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 {% if not method.can_use %}disabled{% endif %}"
+                            {% if not method.can_use %}disabled aria-disabled="true"{% endif %}>
+                      <div>
+                        <i class="fas fa-envelope text-primary mr-3"></i>
+                        <strong>{{ method.name }}</strong>
+                        {% if method.can_use %}
+                          <small class="text-muted d-block">We'll send a code to your email address.</small>
+                        {% else %}
+                          <small class="text-muted d-block">No email address is set on your account.</small>
+                        {% endif %}
+                      </div>
+                      {% if method.can_use %}
+                        <span class="badge bg-success-soft">Available</span>
+                      {% else %}
+                        <span class="badge bg-secondary text-white">Not set up</span>
+                      {% endif %}
+                    </button>
+                  {% endif %}
+                  {% if method.id == 'totp' %}
+                    <button type="submit" name="method" value="totp"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 {% if not method.can_use %}disabled{% endif %}"
+                            {% if not method.can_use %}disabled aria-disabled="true"{% endif %}>
+                      <div>
+                        <i class="fas fa-mobile-alt text-success mr-3"></i>
+                        <strong>{{ method.name }}</strong>
+                        {% if method.can_use %}
+                          <small class="text-muted d-block">Use your authenticator app to generate a code.</small>
+                        {% else %}
+                          <small class="text-muted d-block">Set up an authenticator app in Security Hub to use this.</small>
+                        {% endif %}
+                      </div>
+                      {% if method.can_use %}
+                        <span class="badge bg-primary-soft">Secure</span>
+                      {% else %}
+                        <span class="badge bg-secondary text-white">Not set up</span>
+                      {% endif %}
+                    </button>
+                  {% endif %}
+                  {% if method.id == 'passkey' %}
+                    <button type="button" id="verify-passkey-btn"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 {% if not method.can_use %}disabled{% endif %}"
+                            {% if not method.can_use %}disabled aria-disabled="true"{% endif %}>
+                      <div>
+                        <i class="fas fa-key text-warning mr-3"></i>
+                        <strong>{{ method.name }}</strong>
+                        {% if method.can_use %}
+                          <small class="text-muted d-block">Sign in with your registered passkey.</small>
+                        {% else %}
+                          <small class="text-muted d-block">Set up a passkey in Security Hub to use this.</small>
+                        {% endif %}
+                      </div>
+                      {% if method.can_use %}
+                        <span class="badge bg-dark-soft">Fastest</span>
+                      {% else %}
+                        <span class="badge bg-secondary text-white">Not set up</span>
+                      {% endif %}
+                    </button>
+                  {% endif %}
+                  {% if method.id == 'sms' %}
+                    <button type="submit" name="method" value="sms"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 {% if not method.can_send %}disabled{% endif %}"
+                            {% if not method.can_send %}disabled aria-disabled="true"{% endif %}>
+                      <div>
+                        <i class="fas fa-sms text-info mr-3"></i>
+                        <strong>{{ method.name }}</strong>
+                        {% if method.can_send %}
+                          <small class="text-muted d-block">We'll send a code to your phone.</small>
+                        {% else %}
+                          <small class="text-muted d-block">Add a phone number in Security Hub to use SMS.</small>
+                        {% endif %}
+                      </div>
+                      {% if method.can_send %}
+                        <span class="badge bg-info-soft">Secure</span>
+                      {% else %}
+                        <span class="badge bg-secondary text-white">Not set up</span>
+                      {% endif %}
+                    </button>
+                  {% endif %}
+                  {% if method.id == 'backup_code' %}
+                    <button type="submit" name="method" value="backup_code"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 {% if not method.can_use %}disabled{% endif %}"
+                            {% if not method.can_use %}disabled aria-disabled="true"{% endif %}>
+                      <div>
+                        <i class="fas fa-key text-secondary mr-3"></i>
+                        <strong>{{ method.name }}</strong>
+                        {% if method.can_use %}
+                          <small class="text-muted d-block">Use one of your single-use backup codes.</small>
+                        {% else %}
+                          <small class="text-muted d-block">You have no backup codes remaining.</small>
+                        {% endif %}
+                      </div>
+                      {% if method.can_use %}
+                        <span class="badge bg-warning-soft">Emergency</span>
+                      {% else %}
+                        <span class="badge bg-secondary text-white">Not available</span>
+                      {% endif %}
+                    </button>
+                  {% endif %}
+                {% empty %}
+                  <div class="text-center text-muted py-4">
+                    <p>No MFA methods are currently available for your account.</p>
+                    <p>Please contact support for assistance.</p>
+                  </div>
+                {% endfor %}
+              </div>
+            </form>
+            <hr />
+            <div class="text-center">
+              <a href="{% url 'mfa:logout' %}" class="small text-muted">Not you? Log out.</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% include 'partials/footer.html' %}
+    <script src="{% static 'passkeys/js/base64url.js' %}"></script>
+    <script src="{% static 'passkeys/js/helpers.js' %}"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const passkeyBtn = document.getElementById('verify-passkey-btn');
+        if (!passkeyBtn) return;
+        const errorDiv = document.getElementById('mfa-error-message');
+        let webauthnInFlight = false;
+        function showError(msg) {
+          if (!errorDiv) return;
+          errorDiv.textContent = msg;
+          errorDiv.classList.remove('d-none');
+        }
+        function toBuffer(base64url) {
+          const pad = '==='.slice(0, (4 - base64url.length % 4) % 4);
+          const b64 = (base64url + pad).replace(/-/g, '+').replace(/_/g, '/');
+          const bin = atob(b64);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          return bytes.buffer;
+        }
+        function fromBuffer(buf) {
+          const bytes = new Uint8Array(buf);
+          let bin = '';
+          for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+          return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+        if (!passkeyBtn.hasAttribute('disabled')) {
+          passkeyBtn.style.cursor = 'pointer';
+        }
+        passkeyBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (passkeyBtn.hasAttribute('disabled') || passkeyBtn.getAttribute('aria-disabled') === 'true') {
+            return;
+          }
+          if (webauthnInFlight) {
+            return;
+          }
+          if (errorDiv) errorDiv.classList.add('d-none');
+          try {
+            webauthnInFlight = true;
+            passkeyBtn.setAttribute('disabled', 'true');
+            passkeyBtn.setAttribute('aria-disabled', 'true');
+            passkeyBtn.style.cursor = 'not-allowed';
+            const beginResp = await fetch('{% url "mfa:passkey_auth_begin" %}', { method: 'GET', credentials: 'same-origin' });
+            if (!beginResp.ok) throw new Error('Failed to start passkey authentication');
+            const options = await beginResp.json();
+            console.log('[Passkey] Origin:', window.location.origin);
+            console.log('[Passkey] Begin options:', options);
+            const src = options.publicKey || options;
+            const publicKey = {
+              ...src,
+              challenge: toBuffer(src.challenge)
+            };
+            if (publicKey.allowCredentials && publicKey.allowCredentials.length) {
+              publicKey.allowCredentials = publicKey.allowCredentials.map(c => ({
+                ...c,
+                id: toBuffer(c.id)
+              }));
+            }
+            if (publicKey.rpId) {
+              const host = window.location.hostname;
+              if (publicKey.rpId !== host) {
+                console.log('[Passkey] Overriding rpId from', publicKey.rpId, 'to', host);
+                publicKey.rpId = host;
+              }
+            }
+            if (!publicKey.userVerification) {
+              publicKey.userVerification = 'preferred';
+            }
+            console.log('[Passkey] Requesting assertion with publicKey:', publicKey);
+            const assertion = await navigator.credentials.get({ publicKey });
+            const payload = {
+              id: assertion.id,
+              rawId: fromBuffer(assertion.rawId),
+              type: assertion.type,
+              response: {
+                authenticatorData: fromBuffer(assertion.response.authenticatorData),
+                clientDataJSON: fromBuffer(assertion.response.clientDataJSON),
+                signature: fromBuffer(assertion.response.signature),
+                userHandle: assertion.response.userHandle ? fromBuffer(assertion.response.userHandle) : null
+              }
+            };
+            const postForm = document.createElement('form');
+            postForm.method = 'POST';
+            postForm.action = '{% url "mfa:passkey_auth_complete" %}';
+            postForm.style.display = 'none';
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = '{{ csrf_token }}';
+            postForm.appendChild(csrfInput);
+            const dataInput = document.createElement('input');
+            dataInput.type = 'hidden';
+            dataInput.name = 'passkeys';
+            dataInput.value = JSON.stringify(payload);
+            postForm.appendChild(dataInput);
+            const nextField = document.querySelector('form input[name="next"]');
+            if (nextField && nextField.value) {
+              const nextInput = document.createElement('input');
+              nextInput.type = 'hidden';
+              nextInput.name = 'next';
+              nextInput.value = nextField.value;
+              postForm.appendChild(nextInput);
+            }
+            document.body.appendChild(postForm);
+            postForm.submit();
+          } catch (e) {
+            console.error('[Passkey Auth Error]', e);
+            if (e.name === 'NotAllowedError' || e.name === 'AbortError') {
+              console.log('Passkey authentication cancelled by user.');
+            } else {
+              const details = e.message || e.toString();
+              showError(`Passkey error (${e.name || 'Error'}): ${details}`);
+            }
+          } finally {
+            webauthnInFlight = false;
+            passkeyBtn.removeAttribute('disabled');
+            passkeyBtn.setAttribute('aria-disabled', 'false');
+            passkeyBtn.style.cursor = 'pointer';
+          }
+        });
+      });
+</script>
+{% endblock %}

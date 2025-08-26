@@ -1,0 +1,724 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block title %}Geolocation Tracking{% endblock %}
+{% block admin_page_name %}Geolocation Tracking{% endblock %}
+{% block admin_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Real-time Intelligence</span>
+                <h1 class="display-5 mb-2">🌍 Geolocation Tracking & Analysis</h1>
+                <p class="text-white-75 mb-0">Monitor user authentication patterns across global locations with interactive mapping and threat detection.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Geographic Overview -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header section-header-on-green d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 text-white">🗺️ Global Authentication Map</h5>
+                <div class="d-flex gap-2">
+                  <select class="form-select form-select-sm" id="time-filter">
+                    <option value="1h">Last Hour</option>
+                    <option value="24h" selected>Last 24 Hours</option>
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                  </select>
+                  <button class="btn btn-light btn-sm" onclick="refreshMap()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                  </button>
+                </div>
+              </div>
+              
+              <div id="world-map" style="height: 400px; background: #f8f9fa; border-radius: 8px; position: relative;">
+                <div class="map-loading text-center py-5">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading map...</span>
+                  </div>
+                  <div class="mt-2">Loading global authentication data...</div>
+                </div>
+              </div>
+              
+              <div class="map-legend mt-3">
+                <div class="row">
+                  <div class="col-md-3">
+                    <div class="legend-item">
+                      <span class="legend-color bg-success"></span>
+                      <span class="legend-label">Trusted Locations ({{ trusted_locations }})</span>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="legend-item">
+                      <span class="legend-color bg-warning"></span>
+                      <span class="legend-label">New Locations ({{ new_locations }})</span>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="legend-item">
+                      <span class="legend-color bg-danger"></span>
+                      <span class="legend-label">Suspicious ({{ suspicious_locations }})</span>
+                    </div>
+                  </div>
+                  <div class="col-md-3">
+                    <div class="legend-item">
+                      <span class="legend-color bg-dark"></span>
+                      <span class="legend-label">Blocked ({{ blocked_locations }})</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">📊 Location Analytics</h5>
+              
+              <div class="analytics-metrics">
+                <div class="metric-item">
+                  <div class="metric-icon bg-primary">
+                    <i class="fas fa-globe-americas"></i>
+                  </div>
+                  <div class="metric-content">
+                    <div class="metric-value">{{ total_countries }}</div>
+                    <div class="metric-label">Countries</div>
+                  </div>
+                </div>
+                
+                <div class="metric-item">
+                  <div class="metric-icon bg-info">
+                    <i class="fas fa-city"></i>
+                  </div>
+                  <div class="metric-content">
+                    <div class="metric-value">{{ total_cities }}</div>
+                    <div class="metric-label">Cities</div>
+                  </div>
+                </div>
+                
+                <div class="metric-item">
+                  <div class="metric-icon bg-success">
+                    <i class="fas fa-map-marker-alt"></i>
+                  </div>
+                  <div class="metric-content">
+                    <div class="metric-value">{{ unique_locations }}</div>
+                    <div class="metric-label">Unique Locations</div>
+                  </div>
+                </div>
+                
+                <div class="metric-item">
+                  <div class="metric-icon bg-warning">
+                    <i class="fas fa-route"></i>
+                  </div>
+                  <div class="metric-content">
+                    <div class="metric-value">{{ avg_distance_km }}km</div>
+                    <div class="metric-label">Avg Distance</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <h6>Top Countries</h6>
+                {% for country in top_countries %}
+                <div class="country-stat">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div class="country-info">
+                      <span class="flag-icon flag-icon-{{ country.code|lower }}"></span>
+                      <span class="country-name">{{ country.name }}</span>
+                    </div>
+                    <span class="country-count">{{ country.login_count }}</span>
+                  </div>
+                  <div class="progress mt-1" style="height: 4px;">
+                    <div class="progress-bar bg-primary" style="width: 75%"></div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Location Details -->
+      <div class="card shadow-sm mb-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📍 Location Details</h5>
+            <div class="d-flex gap-2">
+              <select class="form-select form-select-sm" id="location-filter">
+                <option value="">All Locations</option>
+                <option value="suspicious">Suspicious Only</option>
+                <option value="new">New Locations</option>
+                <option value="blocked">Blocked</option>
+                <option value="trusted">Trusted</option>
+              </select>
+              <button class="btn btn-outline-primary btn-sm" onclick="exportLocationData()">
+                <i class="fas fa-download"></i> Export
+              </button>
+            </div>
+          </div>
+          
+          <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Location</th>
+                  <th>User</th>
+                  <th>IP Address</th>
+                  <th>ISP</th>
+                  <th>Risk Score</th>
+                  <th>First Seen</th>
+                  <th>Last Activity</th>
+                  <th>Login Count</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for location in locations %}
+                <tr class="{% if location.is_suspicious %}table-warning{% endif %}{% if location.is_blocked %}table-danger{% endif %}">
+                  <td>
+                    <div class="location-info">
+                      <div class="location-primary">
+                        <span class="flag-icon flag-icon-{{ location.country_code|lower }}"></span>
+                        <strong>{{ location.city }}, {{ location.country }}</strong>
+                      </div>
+                      <div class="location-coords">
+                        <small class="text-muted">{{ location.latitude }}, {{ location.longitude }}</small>
+                      </div>
+                      <div class="location-accuracy">
+                        <small class="text-muted">±{{ location.accuracy }}km accuracy</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="user-info">
+                      <div class="fw-bold">{{ location.user.username }}</div>
+                      <small class="text-muted">{{ location.user.email }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <code class="ip-address">{{ location.ip_address }}</code>
+                    {% if location.is_vpn %}
+                    <i class="fas fa-shield-alt text-warning ms-1" title="VPN detected"></i>
+                    {% endif %}
+                    {% if location.is_tor %}
+                    <i class="fas fa-user-secret text-danger ms-1" title="Tor network"></i>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="isp-info">
+                      <div>{{ location.isp_name }}</div>
+                      <small class="text-muted">{{ location.isp_type }}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="risk-score">
+                      <div class="score-value text-{{ location.risk_color }}">{{ location.risk_score }}%</div>
+                      <div class="progress mt-1" style="height: 4px;">
+                        <div class="progress-bar bg-warning" style="width: 65%"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div>{{ location.first_seen|date:"M d, Y" }}</div>
+                    <small class="text-muted">{{ location.first_seen|timesince }} ago</small>
+                  </td>
+                  <td>
+                    <div>{{ location.last_activity|date:"M d, H:i" }}</div>
+                    <small class="text-muted">{{ location.last_activity|timesince }} ago</small>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ location.count_color }}">{{ location.login_count }}</span>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-info" onclick="viewLocationDetails('{{ location.id }}')" title="Details">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      {% if not location.is_trusted %}
+                      <button class="btn btn-outline-success" onclick="trustLocation('{{ location.id }}')" title="Trust">
+                        <i class="fas fa-check"></i>
+                      </button>
+                      {% endif %}
+                      {% if not location.is_blocked %}
+                      <button class="btn btn-outline-danger" onclick="blockLocation('{{ location.id }}')" title="Block">
+                        <i class="fas fa-ban"></i>
+                      </button>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="9" class="text-center text-muted">No location data found</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Travel Patterns -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">✈️ Travel Pattern Analysis</h5>
+                <div class="d-flex gap-2">
+                  <select class="form-select form-select-sm" id="travel-period">
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d" selected>Last 30 Days</option>
+                    <option value="90d">Last 90 Days</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="travel-patterns mt-3">
+                {% for pattern in travel_patterns %}
+                <div class="travel-item risk-{{ pattern.risk_level }}">
+                  <div class="travel-route">
+                    <div class="route-start">
+                      <span class="flag-icon flag-icon-{{ pattern.from_country_code|lower }}"></span>
+                      <span class="location-name">{{ pattern.from_city }}</span>
+                    </div>
+                    <div class="route-arrow">
+                      <i class="fas fa-arrow-right"></i>
+                      <div class="route-info">
+                        <small>{{ pattern.distance_km }}km</small>
+                        <small>{{ pattern.travel_time }}</small>
+                      </div>
+                    </div>
+                    <div class="route-end">
+                      <span class="flag-icon flag-icon-{{ pattern.to_country_code|lower }}"></span>
+                      <span class="location-name">{{ pattern.to_city }}</span>
+                    </div>
+                  </div>
+                  <div class="travel-details">
+                    <div class="travel-user">
+                      <strong>{{ pattern.user.username }}</strong>
+                      <span class="badge bg-{{ pattern.risk_color }}">{{ pattern.risk_level|upper }}</span>
+                    </div>
+                    <div class="travel-meta">
+                      <span class="travel-time">{{ pattern.time_between }} between logins</span>
+                      <span class="travel-date">{{ pattern.detected_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                    {% if pattern.is_impossible %}
+                    <div class="travel-warning">
+                      <i class="fas fa-exclamation-triangle text-danger"></i>
+                      <span class="text-danger">Impossible travel detected</span>
+                    </div>
+                    {% endif %}
+                  </div>
+                  <div class="travel-actions">
+                    <button class="btn btn-outline-primary btn-sm" onclick="analyzeTravel('{{ pattern.id }}')">
+                      <i class="fas fa-search"></i> Analyze
+                    </button>
+                    {% if pattern.is_suspicious %}
+                    <button class="btn btn-outline-warning btn-sm" onclick="investigateTravel('{{ pattern.id }}')">
+                      <i class="fas fa-flag"></i> Investigate
+                    </button>
+                    {% endif %}
+                  </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-4">
+                  <i class="fas fa-map fa-3x mb-3 text-success"></i>
+                  <h6>No Unusual Travel Patterns</h6>
+                  <p>All user travel patterns appear normal</p>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">🚨 Geo-blocking Rules</h5>
+              
+              <div class="geo-rules">
+                {% for rule in geo_blocking_rules %}
+                <div class="rule-item">
+                  <div class="rule-header">
+                    <div class="rule-name">{{ rule.name }}</div>
+                    <div class="rule-toggle">
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="rule-{{ rule.id }}" {% if rule.is_active %}checked{% endif %} onchange="toggleRule('{{ rule.id }}')">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="rule-details">
+                    <div class="rule-description">{{ rule.description }}</div>
+                    <div class="rule-stats">
+                      <span class="stat-item">
+                        <i class="fas fa-ban text-danger"></i>
+                        {{ rule.blocked_count }} blocked
+                      </span>
+                      <span class="stat-item">
+                        <i class="fas fa-clock text-muted"></i>
+                        Updated {{ rule.updated_at|timesince }} ago
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              
+              <div class="mt-3">
+                <button class="btn btn-outline-primary btn-sm w-100" onclick="createGeoRule()">
+                  <i class="fas fa-plus"></i> Create New Rule
+                </button>
+              </div>
+              
+              <div class="mt-4">
+                <h6>Quick Actions</h6>
+                <div class="quick-actions">
+                  <button class="btn btn-outline-warning btn-sm w-100 mb-2" onclick="reviewSuspiciousLocations()">
+                    <i class="fas fa-exclamation-triangle"></i> Review Suspicious ({{ suspicious_count }})
+                  </button>
+                  <button class="btn btn-outline-info btn-sm w-100 mb-2" onclick="viewTravelAlerts()">
+                    <i class="fas fa-plane"></i> Travel Alerts ({{ travel_alerts_count }})
+                  </button>
+                  <button class="btn btn-outline-success btn-sm w-100" onclick="exportGeoReport()">
+                    <i class="fas fa-file-export"></i> Export Geo Report
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+.legend-label {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+.analytics-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.metric-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+.metric-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 1rem;
+}
+.metric-content {
+  flex: 1;
+}
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #334155;
+}
+.metric-label {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+.country-stat {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+.country-stat:last-child {
+  border-bottom: none;
+}
+.country-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.country-name {
+  font-weight: 500;
+  color: #334155;
+}
+.country-count {
+  font-weight: bold;
+  color: #64748b;
+}
+.flag-icon {
+  width: 20px;
+  height: 15px;
+  background-size: contain;
+  display: inline-block;
+  margin-right: 0.25rem;
+}
+.location-info {
+  line-height: 1.4;
+}
+.location-primary {
+  font-weight: 500;
+  color: #334155;
+  margin-bottom: 0.25rem;
+}
+.location-coords, .location-accuracy {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+.ip-address {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  background: #f1f3f4;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+.risk-score {
+  text-align: center;
+}
+.score-value {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+.travel-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-left: 4px solid #e1e6ea;
+  background: #f8f9fa;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 1rem;
+}
+.travel-item.risk-high {
+  border-left-color: #dc3545;
+  background: #fff5f5;
+}
+.travel-item.risk-medium {
+  border-left-color: #ffc107;
+  background: #fffbf0;
+}
+.travel-item.risk-low {
+  border-left-color: #17a2b8;
+  background: #f0f9ff;
+}
+.travel-route {
+  display: flex;
+  align-items: center;
+  margin-right: 1rem;
+  min-width: 300px;
+}
+.route-start, .route-end {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.route-arrow {
+  margin: 0 1rem;
+  text-align: center;
+  color: #64748b;
+}
+.route-info {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+.travel-details {
+  flex: 1;
+  margin-right: 1rem;
+}
+.travel-user {
+  margin-bottom: 0.5rem;
+}
+.travel-meta {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+.travel-meta > * {
+  margin-right: 1rem;
+}
+.travel-warning {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+.travel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.rule-item {
+  border: 1px solid #e1e6ea;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #fff;
+}
+.rule-header {
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.rule-name {
+  font-weight: bold;
+  color: #334155;
+}
+.rule-description {
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+.rule-stats {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+.stat-item {
+  margin-right: 1rem;
+}
+.quick-actions .btn {
+  text-align: left;
+}
+</style>
+
+<script>
+// Initialize map (placeholder for actual map implementation)
+function initializeMap() {
+  // This would integrate with a mapping service like Leaflet, Google Maps, or Mapbox
+  const mapContainer = document.getElementById('world-map');
+  mapContainer.innerHTML = `
+    <div class="map-placeholder text-center py-5">
+      <i class="fas fa-map fa-3x text-primary mb-3"></i>
+      <h5>Interactive World Map</h5>
+      <p class="text-muted">Authentication locations would be displayed here with real-time markers</p>
+      <div class="map-stats mt-3">
+        <span class="badge bg-success me-2">{{ trusted_locations }} Trusted</span>
+        <span class="badge bg-warning me-2">{{ new_locations }} New</span>
+        <span class="badge bg-danger me-2">{{ suspicious_locations }} Suspicious</span>
+        <span class="badge bg-dark">{{ blocked_locations }} Blocked</span>
+      </div>
+    </div>
+  `;
+}
+
+// Initialize map on page load
+document.addEventListener('DOMContentLoaded', function() {
+  initializeMap();
+});
+
+function refreshMap() {
+  window.location.reload();
+}
+
+function exportLocationData() {
+  window.location.href = '{% url "mfa:admin_export_location_data" %}';
+}
+
+function viewLocationDetails(locationId) {
+  window.location.href = `/mfa/admin/locations/${locationId}/`;
+}
+
+function trustLocation(locationId) {
+  fetch(`/mfa/admin/locations/${locationId}/trust/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Location marked as trusted');
+        window.location.reload();
+      } else {
+        alert('Failed to trust location: ' + data.error);
+      }
+    });
+}
+
+function blockLocation(locationId) {
+  if (confirm('Block this location? This will prevent future logins from this location.')) {
+    fetch(`/mfa/admin/locations/${locationId}/block/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Location blocked successfully');
+          window.location.reload();
+        } else {
+          alert('Failed to block location: ' + data.error);
+        }
+      });
+  }
+}
+
+function analyzeTravel(patternId) {
+  window.location.href = `/mfa/admin/travel-patterns/${patternId}/analyze/`;
+}
+
+function investigateTravel(patternId) {
+  window.location.href = `/mfa/admin/travel-patterns/${patternId}/investigate/`;
+}
+
+function toggleRule(ruleId) {
+  const checkbox = document.getElementById(`rule-${ruleId}`);
+  fetch(`/mfa/admin/geo-rules/${ruleId}/toggle/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    },
+    body: JSON.stringify({ active: checkbox.checked })
+  }).then(response => response.json())
+    .then(data => {
+      if (!data.success) {
+        checkbox.checked = !checkbox.checked;
+        alert('Failed to update rule: ' + data.error);
+      }
+    });
+}
+
+function createGeoRule() {
+  window.location.href = '{% url "mfa:admin_create_geo_rule" %}';
+}
+
+function reviewSuspiciousLocations() {
+  window.location.href = '{% url "mfa:admin_suspicious_locations" %}';
+}
+
+function viewTravelAlerts() {
+  window.location.href = '{% url "mfa:admin_travel_alerts" %}';
+}
+
+function exportGeoReport() {
+  window.location.href = '{% url "mfa:admin_export_geo_report" %}';
+}
+</script>
+{% endblock %}

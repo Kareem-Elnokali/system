@@ -1,0 +1,531 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Workflow Automation - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Workflow Automation{% endblock %}
+{% block admin_content %}
+<div class="container py-5 admin-dashboard">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Automation</span>
+                <h1 class="display-4 mb-3">Workflow Automation</h1>
+                <p class="text-white-75 mb-0">Automated MFA enrollment, policy enforcement, and escalation management.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Automation Overview -->
+      <div class="row g-3 stats-cards-row mt-3">
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Active Rules</div>
+              <div class="display-6 text-success">{{ active_automation_rules|length }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Auto-Enrolled (30d)</div>
+              <div class="display-6 text-info">{{ auto_enrolled_count }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Pending Escalations</div>
+              <div class="display-6 text-warning">{{ escalation_queue|length }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Policy Violations</div>
+              <div class="display-6 text-danger">{{ policy_violations|length }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Auto-Enrollment Dashboard -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Auto-Enrollment Status</h5>
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-success" onclick="enableAutoEnrollment()">
+                <i class="fas fa-play mr-2"></i>Enable All
+              </button>
+              <button class="btn btn-outline-secondary" onclick="configureAutoEnrollment()">
+                <i class="fas fa-cog mr-2"></i>Configure
+              </button>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-4">
+              <div class="auto-enrollment-category">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">New Staff Members</h6>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="autoEnrollStaff" checked>
+                  </div>
+                </div>
+                <p class="small text-muted mb-2">Automatically enroll new staff in MFA within 24 hours</p>
+                <div class="d-flex justify-content-between">
+                  <span class="small">Enrolled this month:</span>
+                  <strong class="text-success">{{ auto_enrolled_staff }}</strong>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="auto-enrollment-category">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">Administrators</h6>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="autoEnrollAdmin" checked>
+                  </div>
+                </div>
+                <p class="small text-muted mb-2">Immediate MFA requirement for admin accounts</p>
+                <div class="d-flex justify-content-between">
+                  <span class="small">Enrolled this month:</span>
+                  <strong class="text-success">{{ auto_enrolled_admins }}</strong>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="auto-enrollment-category">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">High-Risk Users</h6>
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="autoEnrollRisk" checked>
+                  </div>
+                </div>
+                <p class="small text-muted mb-2">Auto-enroll users with suspicious activity</p>
+                <div class="d-flex justify-content-between">
+                  <span class="small">Enrolled this month:</span>
+                  <strong class="text-success">{{ auto_enrolled_risk }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Policy Enforcement -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Policy Enforcement</h5>
+            <button class="btn btn-sm btn-outline-primary" onclick="createNewPolicy()">
+              <i class="fas fa-plus mr-2"></i>New Policy
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Policy Name</th>
+                  <th>Target Group</th>
+                  <th>Status</th>
+                  <th>Violations (7d)</th>
+                  <th>Last Enforced</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <i class="fas fa-shield-alt mr-2 text-primary"></i>
+                    Admin MFA Requirement
+                  </td>
+                  <td><span class="badge bg-danger">Administrators</span></td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td><span class="badge bg-danger">{{ policy_violations|length }}</span></td>
+                  <td>{{ last_policy_enforcement|date:'Y-m-d H:i'|default:'Never' }}</td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="editPolicy('admin-mfa')">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-outline-warning" onclick="enforcePolicy('admin-mfa')">
+                        <i class="fas fa-gavel"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <i class="fas fa-clock mr-2 text-warning"></i>
+                    Staff MFA Deadline
+                  </td>
+                  <td><span class="badge bg-warning">Staff</span></td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td><span class="badge bg-warning">{{ staff_without_mfa|default:"0" }}</span></td>
+                  <td>{{ last_staff_enforcement|date:'Y-m-d H:i'|default:'Never' }}</td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="editPolicy('staff-deadline')">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-outline-warning" onclick="enforcePolicy('staff-deadline')">
+                        <i class="fas fa-gavel"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <i class="fas fa-exclamation-triangle mr-2 text-danger"></i>
+                    Device Age Limit
+                  </td>
+                  <td><span class="badge bg-secondary">All Users</span></td>
+                  <td><span class="badge bg-success">Active</span></td>
+                  <td><span class="badge bg-secondary">0</span></td>
+                  <td>{{ last_device_cleanup|date:'Y-m-d H:i'|default:'Never' }}</td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="editPolicy('device-age')">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-outline-warning" onclick="enforcePolicy('device-age')">
+                        <i class="fas fa-gavel"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Escalation Queue -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Escalation Queue</h5>
+            <button class="btn btn-sm btn-outline-warning" onclick="processAllEscalations()">
+              <i class="fas fa-tasks mr-2"></i>Process All
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Issue Type</th>
+                  <th>Priority</th>
+                  <th>Days Overdue</th>
+                  <th>Assigned To</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for escalation in escalation_queue %}
+                <tr>
+                  <td>
+                    <a href="{% url 'mfa:admin_user_detail' escalation.user.id %}" class="user-link">
+                      {{ escalation.user.username }}
+                    </a>
+                    {% if escalation.user.is_superuser %}
+                      <span class="badge bg-danger">superuser</span>
+                    {% elif escalation.user.is_staff %}
+                      <span class="badge bg-secondary">staff</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if escalation.issue_type == 'no_mfa' %}
+                      <span class="badge bg-danger">No MFA Setup</span>
+                    {% elif escalation.issue_type == 'device_issues' %}
+                      <span class="badge bg-warning">Device Issues</span>
+                    {% elif escalation.issue_type == 'policy_violation' %}
+                      <span class="badge bg-danger">Policy Violation</span>
+                    {% else %}
+                      <span class="badge bg-secondary">{{ escalation.issue_type }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if escalation.priority == 'critical' %}
+                      <span class="badge bg-danger">🔴 Critical</span>
+                    {% elif escalation.priority == 'high' %}
+                      <span class="badge bg-warning">🟡 High</span>
+                    {% else %}
+                      <span class="badge bg-secondary">🟠 Medium</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge {% if escalation.days_overdue > 7 %}bg-danger{% elif escalation.days_overdue > 3 %}bg-warning{% else %}bg-secondary{% endif %}">
+                      {{ escalation.days_overdue }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if escalation.assigned_to %}
+                      {{ escalation.assigned_to.username }}
+                    {% else %}
+                      <span class="text-muted">Unassigned</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="assignEscalation(1)">
+                        <i class="fas fa-user-plus"></i>
+                      </button>
+                      <button class="btn btn-outline-success" onclick="resolveEscalation(1)">
+                        <i class="fas fa-check"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" onclick="escalateHigher(1)">
+                        <i class="fas fa-arrow-up"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-muted text-center">No pending escalations</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Automation Rules -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Automation Rules</h5>
+            <button class="btn btn-sm btn-outline-success" onclick="createAutomationRule()">
+              <i class="fas fa-plus mr-2"></i>New Rule
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Rule Name</th>
+                  <th>Trigger</th>
+                  <th>Action</th>
+                  <th>Status</th>
+                  <th>Executions (7d)</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for rule in active_automation_rules %}
+                <tr>
+                  <td>
+                    <i class="fas fa-robot mr-2 text-success"></i>
+                    {{ rule.name }}
+                  </td>
+                  <td>
+                    <span class="badge bg-info">{{ rule.trigger }}</span>
+                  </td>
+                  <td>{{ rule.action }}</td>
+                  <td>
+                    <span class="badge {% if rule.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                      {% if rule.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                  </td>
+                  <td><span class="badge bg-primary">{{ rule.execution_count }}</span></td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="editRule(1)">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-outline-warning" onclick="toggleRule(1)">
+                        <i class="fas fa-pause"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" onclick="deleteRule(1)">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-muted text-center">No automation rules configured</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Automation Analytics -->
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Automation Effectiveness</h5>
+              </div>
+              <canvas id="automationChart" width="400" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Automation Activity</h5>
+              </div>
+              <div class="activity-feed">
+                <div class="activity-item d-flex align-items-center mb-3">
+                  <div class="activity-icon bg-success text-white rounded-circle mr-3">
+                    <i class="fas fa-user-plus"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-title">Auto-enrolled 3 new staff members</div>
+                    <div class="activity-time text-muted small">2 hours ago</div>
+                  </div>
+                </div>
+                <div class="activity-item d-flex align-items-center mb-3">
+                  <div class="activity-icon bg-warning text-white rounded-circle mr-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-title">Policy violation detected for admin user</div>
+                    <div class="activity-time text-muted small">4 hours ago</div>
+                  </div>
+                </div>
+                <div class="activity-item d-flex align-items-center mb-3">
+                  <div class="activity-icon bg-info text-white rounded-circle mr-3">
+                    <i class="fas fa-envelope"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-title">Sent MFA reminder to 12 users</div>
+                    <div class="activity-time text-muted small">6 hours ago</div>
+                  </div>
+                </div>
+                <div class="activity-item d-flex align-items-center">
+                  <div class="activity-icon bg-danger text-white rounded-circle mr-3">
+                    <i class="fas fa-ban"></i>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-title">Blocked 2 suspicious IP addresses</div>
+                    <div class="activity-time text-muted small">8 hours ago</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// Automation Effectiveness Chart
+const automationCtx = document.getElementById('automationChart').getContext('2d');
+new Chart(automationCtx, {
+  type: 'line',
+  data: {
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    datasets: [{
+      label: 'Auto-Enrollments',
+      data: [12, 8, 15, 6, 9, 4, 7],
+      borderColor: '#22c55e',
+      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+      tension: 0.4
+    }, {
+      label: 'Policy Enforcements',
+      data: [3, 5, 2, 8, 4, 1, 2],
+      borderColor: '#f59e0b',
+      backgroundColor: 'rgba(245, 158, 11, 0.1)',
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    }
+  }
+});
+
+// Action Functions
+function enableAutoEnrollment() {
+  if (confirm('Enable auto-enrollment for all user categories?')) {
+    alert('Auto-enrollment enabled for all categories');
+  }
+}
+
+function configureAutoEnrollment() {
+  alert('Opening auto-enrollment configuration...');
+}
+
+function createNewPolicy() {
+  alert('Opening policy creation wizard...');
+}
+
+function editPolicy(policyId) {
+  alert(`Editing policy: ${policyId}`);
+}
+
+function enforcePolicy(policyId) {
+  if (confirm(`Enforce policy: ${policyId}?`)) {
+    alert(`Policy ${policyId} has been enforced`);
+  }
+}
+
+function processAllEscalations() {
+  if (confirm('Process all pending escalations?')) {
+    alert('All escalations have been processed');
+  }
+}
+
+function assignEscalation(escalationId) {
+  const assignee = prompt('Assign to (username):');
+  if (assignee) {
+    alert(`Escalation assigned to ${assignee}`);
+  }
+}
+
+function resolveEscalation(escalationId) {
+  if (confirm('Mark this escalation as resolved?')) {
+    alert('Escalation resolved successfully');
+  }
+}
+
+function escalateHigher(escalationId) {
+  if (confirm('Escalate to higher priority?')) {
+    alert('Escalation priority increased');
+  }
+}
+
+function createAutomationRule() {
+  alert('Opening automation rule wizard...');
+}
+
+function editRule(ruleId) {
+  alert(`Editing automation rule: ${ruleId}`);
+}
+
+function toggleRule(ruleId) {
+  if (confirm('Toggle automation rule status?')) {
+    alert('Automation rule status toggled');
+  }
+}
+
+function deleteRule(ruleId) {
+  if (confirm('Delete this automation rule? This action cannot be undone.')) {
+    alert('Automation rule deleted');
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,555 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Forensics & Audit - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Forensics & Audit{% endblock %}
+{% block admin_content %}
+<div class="container py-5 admin-dashboard">
+  <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Admin</span>
+                <h1 class="display-4 mb-3">Forensics & Audit</h1>
+                <p class="text-white-75 mb-0">Comprehensive security forensics and detailed audit trail analysis.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+
+      <!-- Key Metrics -->
+      <div class="row mt-3">
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Total Logs</div>
+              <div id="kpi-total-logs" class="display-6">--</div>
+              <i class="fas fa-file-alt mt-2"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Investigations</div>
+              <div id="kpi-investigations" class="display-6 text-info">--</div>
+              <i class="fas fa-search text-info mt-2"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Last 24h Logs</div>
+              <div id="kpi-logs-24h" class="display-6 text-warning">--</div>
+              <i class="fas fa-exclamation-triangle text-warning mt-2"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Compliance</div>
+              <div id="kpi-compliance" class="display-6 text-success">--%</div>
+              <i class="fas fa-check-circle text-success mt-2"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Forensics Analysis Tools -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+              <h5 class="mb-0">
+                <i class="fas fa-search mr-2"></i>Forensics Analysis Tools
+              </h5>
+              <div class="d-flex flex-wrap justify-content-center justify-content-md-right align-items-center mt-2 mt-md-0" style="gap: 0.5rem;">
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshForensics()">
+                  <i class="fas fa-sync-alt"></i><span class="d-none d-md-inline ml-1">Refresh</span>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="exportForensics()">
+                  <i class="fas fa-download"></i><span class="d-none d-md-inline ml-1">Export</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-6">
+              <h6>Evidence Chain</h6>
+              <div class="timeline-forensic" id="timeline-evidence">
+                <div class="text-muted">Loading timeline…</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <h6>Quick Filters</h6>
+              <div id="quick-filters" class="list-group list-group-flush">
+                <div class="list-group-item px-0 text-muted">Loading filters…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <!-- Compliance Status -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Compliance Status</h6>
+        </div>
+        <div id="compliance-bars" class="card-body"></div>
+      </div>
+
+      <!-- Forensic Tools -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="fas fa-tools me-2"></i>Forensic Tools</h6>
+        </div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button class="btn btn-outline-primary" onclick="logCorrelation()">
+              <i class="fas fa-project-diagram me-2"></i>Log Correlation
+            </button>
+            <button class="btn btn-outline-info" onclick="timelineAnalysis()">
+              <i class="fas fa-clock me-2"></i>Timeline Analysis
+            </button>
+            <button class="btn btn-outline-success" onclick="patternDetection()">
+              <i class="fas fa-search-plus me-2"></i>Pattern Detection
+            </button>
+            <button class="btn btn-outline-warning" onclick="riskAssessment()">
+              <i class="fas fa-exclamation-triangle me-2"></i>Risk Assessment
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Cases -->
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="fas fa-folder me-2"></i>Recent Cases</h6>
+        </div>
+        <div id="recent-cases" class="card-body">
+          <div class="text-muted">Loading cases…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audit Details Modal -->
+<div class="modal fade" id="auditDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Audit Event Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="auditDetailsContent">
+          <!-- Audit details will be loaded here -->
+        </div>
+      </div>
+    </div>
+  </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+  {{ block.super }}
+<style>
+.timeline-forensic {
+  position: relative;
+  padding-left: 30px;
+}
+
+.timeline-forensic::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #dee2e6;
+}
+
+.timeline-item-forensic {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.timeline-marker-forensic {
+  position: absolute;
+  left: -22px;
+  top: 5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+.timeline-content-forensic {
+  font-size: 14px;
+}
+
+.table-danger {
+  --bs-table-accent-bg: rgba(220, 53, 69, 0.1);
+}
+
+.table-warning {
+  --bs-table-accent-bg: rgba(255, 193, 7, 0.1);
+}
+
+.table-info {
+  --bs-table-accent-bg: rgba(13, 202, 240, 0.1);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const endpoints = {
+  forensicsSummary: '{% url "mfa:admin_api_forensics_summary" %}',
+  complianceStatus: '{% url "mfa:admin_api_compliance_status" %}',
+  incidentTimeline: '{% url "mfa:admin_api_incident_timeline" %}',
+  incidentCategories: '{% url "mfa:admin_api_incident_categories" %}',
+  incidentsActive: '{% url "mfa:admin_api_incidents_active" %}',
+  auditEvent: '{% url "mfa:admin_api_audit_event_detail" %}',
+  exportAuditLogs: '{% url "mfa:admin_export_audit_logs" %}',
+  startLogCorrelation: '{% url "mfa:admin_start_log_correlation" %}',
+  runTimelineAnalysis: '{% url "mfa:admin_run_timeline_analysis" %}',
+  runPatternDetection: '{% url "mfa:admin_run_pattern_detection" %}',
+  runRiskAssessment: '{% url "mfa:admin_run_risk_assessment" %}',
+};
+
+function barClassForScore(score) {
+  if (score == null) return 'bg-secondary';
+  if (score >= 90) return 'bg-success';
+  if (score >= 75) return 'bg-warning';
+  return 'bg-danger';
+}
+
+async function loadForensicsSummary() {
+  try {
+    const r = await fetch(endpoints.forensicsSummary, {credentials: 'same-origin'});
+    const j = await r.json();
+    document.getElementById('kpi-total-logs').textContent = (j.total_logs ?? 0).toLocaleString();
+    document.getElementById('kpi-investigations').textContent = j.active_investigations ?? 0;
+    document.getElementById('kpi-logs-24h').textContent = (j.logs_24h ?? 0).toLocaleString();
+  } catch (e) {
+    console.error('forensics summary error', e);
+  }
+}
+
+function _sevClass(sev) {
+  switch ((sev || '').toLowerCase()) {
+    case 'critical': return 'bg-danger';
+    case 'high': return 'bg-danger';
+    case 'medium': return 'bg-warning';
+    case 'low': return 'bg-info';
+    default: return 'bg-secondary';
+  }
+}
+
+function _statusBadge(status) {
+  const s = (status || '').toLowerCase();
+  if (s === 'resolved' || s === 'closed') return 'bg-success';
+  if (s === 'investigating' || s === 'in_progress') return 'bg-warning';
+  return 'bg-danger';
+}
+
+function _fmtTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  } catch { return iso; }
+}
+
+async function loadTimeline() {
+  const container = document.getElementById('timeline-evidence');
+  try {
+    const r = await fetch(endpoints.incidentTimeline, {credentials: 'same-origin'});
+    const j = await r.json();
+    const events = j.events || [];
+    if (!events.length) {
+      container.innerHTML = '<div class="text-muted">No recent events</div>';
+      return;
+    }
+    container.innerHTML = events.map(ev => `
+      <div class="timeline-item-forensic" role="button" onclick="viewAuditDetails('${ev.incident_id || ''}', null)">
+        <div class="timeline-marker-forensic ${_sevClass(ev.severity)}"></div>
+        <div class="timeline-content-forensic">
+          <strong>${_fmtTime(ev.ts)}</strong> - ${ev.title}
+          <br><small class="text-muted">ID: ${ev.incident_id} · Status: ${ev.status}</small>
+        </div>
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('timeline error', e);
+    container.innerHTML = '<div class="text-danger">Failed to load timeline</div>';
+  }
+}
+
+async function loadCategories() {
+  const container = document.getElementById('quick-filters');
+  try {
+    const r = await fetch(endpoints.incidentCategories, {credentials: 'same-origin'});
+    const j = await r.json();
+    const labels = j.labels || [];
+    const counts = j.counts || [];
+    if (!labels.length) {
+      container.innerHTML = '<div class="list-group-item px-0 text-muted">No categories</div>';
+      return;
+    }
+    const items = labels.map((label, idx) => {
+      const c = counts[idx] || 0;
+      let badge = 'bg-info';
+      if (c >= 20) badge = 'bg-danger';
+      else if (c >= 10) badge = 'bg-warning';
+      return `<button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
+        ${label} <span class="badge ${badge}">${c}</span>
+      </button>`;
+    }).join('');
+    container.innerHTML = items;
+  } catch (e) {
+    console.error('categories error', e);
+    container.innerHTML = '<div class="list-group-item px-0 text-danger">Failed to load categories</div>';
+  }
+}
+
+async function loadRecentCases() {
+  const container = document.getElementById('recent-cases');
+  try {
+    const r = await fetch(endpoints.incidentsActive, {credentials: 'same-origin'});
+    const j = await r.json();
+    const items = j.items || [];
+    if (!items.length) {
+      container.innerHTML = '<div class="text-muted">No active incidents</div>';
+      return;
+    }
+    const html = '<div class="list-group list-group-flush">' + items.map(it => {
+      const badge = _statusBadge(it.status);
+      const when = _fmtTime(it.created_at);
+      const title = it.incident_id || '—';
+      const subtitle = (it.incident_type || 'Incident') + ` · ${when}`;
+      return `<div class="list-group-item px-0" role="button" onclick="viewAuditDetails('${it.incident_id || ''}', null)">
+        <div class="d-flex justify-content-between">
+          <div>
+            <strong>${title}</strong>
+            <br><small class="text-muted">${subtitle}</small>
+          </div>
+          <span class="badge ${badge}">${it.status}</span>
+        </div>
+      </div>`;
+    }).join('') + '</div>';
+    container.innerHTML = html;
+  } catch (e) {
+    console.error('cases error', e);
+    container.innerHTML = '<div class="text-danger">Failed to load cases</div>';
+  }
+}
+
+async function loadCompliance() {
+  const container = document.getElementById('compliance-bars');
+  try {
+    const r = await fetch(endpoints.complianceStatus, {credentials: 'same-origin'});
+    const j = await r.json();
+    const scores = j.scores || {};
+    const order = [
+      ['gdpr', 'GDPR Compliance'],
+      ['sox', 'SOX Compliance'],
+      ['hipaa', 'HIPAA Compliance'],
+      ['pci_dss', 'PCI DSS'],
+      ['iso27001', 'ISO 27001'],
+    ];
+    const rows = order.map(([key, label]) => {
+      const v = scores[key];
+      const pct = v == null ? 0 : Math.round(v);
+      const cls = barClassForScore(v);
+      const textCls = v == null ? 'text-muted' : (v >= 90 ? 'text-success' : v >= 75 ? 'text-warning' : 'text-danger');
+      return `
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-1">
+            <span>${label}</span>
+            <span class="${textCls}">${v == null ? '—' : pct + '%'}</span>
+          </div>
+          <div class="progress mb-2" style="height: 8px;">
+            <div class="progress-bar ${cls}" style="width: ${pct}%"></div>
+          </div>
+        </div>`;
+    }).join('');
+    container.innerHTML = rows || '<div class="text-muted">No compliance data</div>';
+    // KPI compliance: average of available scores
+    const vals = Object.values(scores).filter(v => typeof v === 'number');
+    const avg = vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null;
+    document.getElementById('kpi-compliance').textContent = (avg == null ? '--' : avg) + '%';
+  } catch (e) {
+    console.error('compliance error', e);
+    container.innerHTML = '<div class="text-danger">Failed to load compliance data</div>';
+  }
+}
+
+function refreshForensics() {
+  loadForensicsSummary();
+  loadTimeline();
+  loadCategories();
+  loadRecentCases();
+  loadCompliance();
+}
+
+function exportForensics() {
+  // Export last 7 days by default
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 7);
+  const fmt = (d) => d.toISOString().slice(0,10);
+  const url = `${endpoints.exportAuditLogs}?start_date=${fmt(start)}&end_date=${fmt(end)}`;
+  window.location = url;
+}
+
+function startForensicAnalysis() {
+  if (!confirm('Start comprehensive forensic analysis? This may take several minutes.')) return;
+  fetch(endpoints.startLogCorrelation, {method: 'POST', credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(j => {
+      if (j.success) {
+        alert(`Forensic analysis started (job ${j.job_id}).`);
+      } else {
+        alert('Failed to start analysis');
+      }
+    })
+    .catch(() => alert('Failed to start analysis'));
+}
+
+function exportAuditLog() {
+  const startDate = prompt('Start date (YYYY-MM-DD):');
+  const endDate = prompt('End date (YYYY-MM-DD):');
+  if (startDate && endDate) {
+    const url = `${endpoints.exportAuditLogs}?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`;
+    window.location = url;
+  }
+}
+
+function searchAuditLogs() {
+  const searchTerm = document.getElementById('auditSearch').value;
+  if (searchTerm) {
+    alert(`Searching audit logs for: ${searchTerm}`);
+    // In a real implementation, this would filter the table
+  }
+}
+
+async function viewAuditDetails(incidentId, logId) {
+  const modal = new bootstrap.Modal(document.getElementById('auditDetailsModal'));
+  const content = document.getElementById('auditDetailsContent');
+  content.innerHTML = '<div class="text-muted">Loading…</div>';
+  const url = new URL(endpoints.auditEvent, window.location.origin);
+  if (incidentId) url.searchParams.set('incident_id', incidentId);
+  if (logId) url.searchParams.set('log_id', logId);
+  try {
+    const r = await fetch(url.toString(), {credentials: 'same-origin'});
+    const j = await r.json();
+    if (!r.ok) {
+      content.innerHTML = `<div class="text-danger">${j.error || 'Failed to load event'}</div>`;
+    } else {
+      const sevBadge = j.severity ? `<span class="badge ${_sevClass(j.severity)}">${j.severity}</span>` : '';
+      content.innerHTML = `
+        <div class="row">
+          <div class="col-md-6">
+            <h6>Event Information</h6>
+            <table class="table table-sm">
+              <tr><td><strong>ID:</strong></td><td>${j.id || ''}</td></tr>
+              <tr><td><strong>Timestamp:</strong></td><td>${j.timestamp || ''}</td></tr>
+              <tr><td><strong>Type:</strong></td><td>${j.event_type || ''}</td></tr>
+              <tr><td><strong>User:</strong></td><td>${j.user || ''}</td></tr>
+              <tr><td><strong>IP Address:</strong></td><td>${j.ip_address || ''}</td></tr>
+              <tr><td><strong>User Agent:</strong></td><td>${j.user_agent || ''}</td></tr>
+              <tr><td><strong>Severity/Status:</strong></td><td>${sevBadge} ${j.status || ''}</td></tr>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <h6>Raw Data</h6>
+            <pre class="bg-light p-3 rounded"><code>${(j.raw == null ? '' : (typeof j.raw === 'string' ? j.raw : JSON.stringify(j.raw, null, 2)))}</code></pre>
+          </div>
+        </div>`;
+    }
+  } catch (e) {
+    console.error('detail error', e);
+    content.innerHTML = '<div class="text-danger">Failed to load event</div>';
+  }
+  modal.show();
+}
+
+function runNewAnalysis() {
+  const analysisType = prompt('Analysis type (pattern/timeline/correlation/risk):');
+  if (!analysisType) return;
+  const t = analysisType.toLowerCase();
+  if (t.startsWith('pattern')) return patternDetection();
+  if (t.startsWith('timeline')) return timelineAnalysis();
+  if (t.startsWith('correlation')) return logCorrelation();
+  if (t.startsWith('risk')) return riskAssessment();
+}
+
+function logCorrelation() {
+  fetch(endpoints.startLogCorrelation, {method: 'POST', credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(j => {
+      if (j.success) alert(`Log correlation started (job ${j.job_id}).`);
+      else alert('Failed to start log correlation');
+    })
+    .catch(() => alert('Failed to start log correlation'));
+}
+
+function timelineAnalysis() {
+  fetch(endpoints.runTimelineAnalysis, {method: 'POST', credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(j => {
+      if (j.success) {
+        console.log('Timeline series', j.series);
+        alert('Timeline analysis completed. Check console for summary.');
+      } else {
+        alert('Timeline analysis failed');
+      }
+    })
+    .catch(() => alert('Timeline analysis failed'));
+}
+
+function patternDetection() {
+  fetch(endpoints.runPatternDetection, {method: 'POST', credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(j => {
+      if (j.success) {
+        console.table(j.patterns || []);
+        alert('Pattern detection completed. Top patterns printed to console.');
+      } else {
+        alert('Pattern detection failed');
+      }
+    })
+    .catch(() => alert('Pattern detection failed'));
+}
+
+function riskAssessment() {
+  fetch(endpoints.runRiskAssessment, {method: 'POST', credentials: 'same-origin'})
+    .then(r => r.json())
+    .then(j => {
+      if (j.success) {
+        alert(`Risk score: ${j.risk_score}% (${j.level}). Successes: ${j.successes}, Failures: ${j.failures}`);
+      } else {
+        alert('Risk assessment failed');
+      }
+    })
+    .catch(() => alert('Risk assessment failed'));
+}
+
+// Initial load
+document.addEventListener('DOMContentLoaded', () => {
+  refreshForensics();
+});
+</script>
+{% endblock %}

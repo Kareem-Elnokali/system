@@ -1,0 +1,319 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}User MFA Settings - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Settings{% endblock %}
+{% block admin_content %}
+    <div class="container py-5 admin-dashboard">
+      <div class="row justify-content-center">
+        <div class="col-md-12">
+          <div class="glass-frame hero-unified mb-4 rounded-3">
+            <div class="row align-items-stretch no-gutters">
+              <div class="col-12 d-flex pr-lg-0">
+                <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+                  <div class="hero-body">
+                    <span class="badge badge-pill mb-3">Admin</span>
+                    <h1 class="display-5 mb-2">Settings</h1>
+                    <p class="text-white-75 mb-0">Configure MFA options available to your users.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card shadow-sm mb-4 mt-5">
+            <div class="card-body">
+              <div class="section-header section-header-on-green d-flex justify-content-between align-items-center flex-wrap mb-3">
+                <h5 class="mb-2 mb-md-0 text-white">User MFA Options</h5>
+              </div>
+              {% if messages %}
+                {% for message in messages %}
+                  <div class="alert alert-{{ message.tags }} py-2 small" role="alert">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            <form method="post" novalidate>
+              {% csrf_token %}
+              <div class="tab-content mt-3">
+                <div class="tab-pane fade show active">
+                  <h6 class="text-muted mb-3">Available MFA Methods for Users</h6>
+                  <div class="row mfa-grid">
+                    <div class="col-md-6 mb-3">
+                      <div class="card mfa-option border-left-primary rounded-3 h-100 shadow-sm">
+                        <div class="card-body p-3 py-2">
+                          <div class="d-flex align-items-center">
+                            <input class="form-check-input" type="checkbox" name="{{ form.enable_totp.name }}" id="{{ form.enable_totp.id_for_label }}" {% if form.enable_totp.value %}checked{% endif %}>
+                            <div class="mr-3 mfa-icon" style="width:24px; text-align:center;">
+                              <i class="fas fa-mobile-alt text-primary" style="font-size:1.2rem;"></i>
+                            </div>
+                            <label class="form-check-label mb-0 flex-grow-1" for="{{ form.enable_totp.id_for_label }}">
+                              <h6 class="mb-1">Authenticator App (TOTP)</h6>
+                              <small class="text-muted">Allow users to use authenticator apps like Google Authenticator</small>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <div class="card mfa-option border-left-success rounded-3 h-100 shadow-sm">
+                        <div class="card-body p-3 py-2">
+                          <div class="d-flex align-items-center">
+                            <input class="form-check-input" type="checkbox" id="id_enable_email" checked disabled>
+                            <div class="mr-3 mfa-icon" style="width:24px; text-align:center;">
+                              <i class="fas fa-envelope text-success" style="font-size:1.2rem;"></i>
+                            </div>
+                            <label class="form-check-label mb-0 flex-grow-1" for="id_enable_email">
+                              <h6 class="mb-1">Email OTP <span class="badge badge-secondary ml-2 badge-required">Required</span></h6>
+                              <small class="text-muted">Email is the primary authentication method and cannot be disabled.</small>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <div class="card mfa-option border-left-warning rounded-3 h-100 shadow-sm">
+                        <div class="card-body p-3 py-2">
+                          <div class="d-flex align-items-center">
+                            <input class="form-check-input" type="checkbox" name="{{ form.enable_backup_codes.name }}" id="{{ form.enable_backup_codes.id_for_label }}" {% if form.enable_backup_codes.value %}checked{% endif %}>
+                            <div class="mr-3 mfa-icon" style="width:24px; text-align:center;">
+                              <i class="fas fa-key text-warning" style="font-size:1.2rem;"></i>
+                            </div>
+                            <label class="form-check-label mb-0 flex-grow-1" for="{{ form.enable_backup_codes.id_for_label }}">
+                              <h6 class="mb-1">Backup Codes</h6>
+                              <small class="text-muted">Allow users to use single-use backup codes to log in</small>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <div class="card mfa-option border-left-info rounded-3 h-100 shadow-sm">
+                        <div class="card-body p-3 py-2">
+                          <div class="d-flex align-items-center">
+                            <input class="form-check-input" type="checkbox" name="{{ form.enable_passkeys.name }}" id="{{ form.enable_passkeys.id_for_label }}" {% if form.enable_passkeys.value %}checked{% endif %}>
+                            <div class="mr-3 mfa-icon" style="width:24px; text-align:center;">
+                              <i class="fas fa-fingerprint text-info" style="font-size:1.2rem;"></i>
+                            </div>
+                            <label class="form-check-label mb-0 flex-grow-1" for="{{ form.enable_passkeys.id_for_label }}">
+                              <h6 class="mb-1">Passkeys (WebAuthn)</h6>
+                              <small class="text-muted">Allow users to use passkeys and biometric authentication</small>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <div class="card mfa-option border-left-secondary rounded-3 h-100 shadow-sm">
+                        <div class="card-body p-3 py-2">
+                          <div class="d-flex align-items-center">
+                            <input class="form-check-input" type="checkbox" name="{{ form.enable_sms.name }}" id="{{ form.enable_sms.id_for_label }}" {% if form.enable_sms.value %}checked{% endif %}>
+                            <div class="mr-3 mfa-icon" style="width:24px; text-align:center;">
+                              <i class="fas fa-sms text-secondary" style="font-size:1.2rem;"></i>
+                            </div>
+                            <label class="form-check-label mb-0 flex-grow-1" for="{{ form.enable_sms.id_for_label }}">
+                              <h6 class="mb-1">SMS Verification</h6>
+                              <small class="text-muted">Send verification codes via SMS (requires SMS provider setup)</small>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <div class="card border-left-secondary rounded-3 h-100 shadow-sm">
+                        <div class="card-body p-3 py-2">
+                          <div class="d-flex align-items-center">
+                            <input class="form-check-input" type="checkbox" name="{{ form.always_show_method_picker.name }}" id="{{ form.always_show_method_picker.id_for_label }}" {% if form.always_show_method_picker.value %}checked{% endif %}>
+                            <div class="mr-3 mfa-icon" style="width:24px; text-align:center;">
+                              <i class="fas fa-th-list text-secondary" style="font-size:1.2rem;"></i>
+                            </div>
+                            <label class="form-check-label mb-0 flex-grow-1" for="{{ form.always_show_method_picker.id_for_label }}">
+                              <h6 class="mb-1">Always Show Method Picker</h6>
+                              <small class="text-muted">Always show the method selection page, even if user has only one MFA method</small>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted" style="font-size: 0.9rem;">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  These settings control which MFA methods users can choose from. Admin login always uses email OTP.
+                </div>
+                <button type="button" class="btn btn-success px-3 py-2" style="border-radius: 6px;" data-toggle="modal" data-target="#saveSettingsModal">
+                  Save Settings
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="saveSettingsModal" tabindex="-1" role="dialog" aria-labelledby="saveSettingsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="saveSettingsModalLabel">Confirm Changes</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <div class="modal-body">
+            <p>To confirm these changes, please type <strong>CONFIRM</strong> in the box below.</p>
+            <input type="text" class="form-control" id="confirmationText" placeholder="CONFIRM" style="text-transform: uppercase;" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-success" id="confirmSaveBtn" disabled>Save Settings</button>
+          </div>
+        </div>
+      </div>
+    </div>
+{% endblock %}
+{% block extra_css %}{{ block.super }}
+<style>
+  .section-header-on-green {
+    background: linear-gradient(135deg, rgba(118,185,87,0.98) 0%, rgba(63,111,44,0.98) 100%);
+    color: #ffffff !important;
+    margin: -1.25rem -1.25rem 0 -1.25rem; /* match .card-body default padding to avoid overflow */
+    padding: 1.25rem 1.5rem;
+    border-radius: 0.375rem 0.375rem 0 0;
+    overflow: hidden;
+    min-height: 60px;
+  }
+  /* Match Bootstrap 4 default card rounding like statistics page */
+  .card {
+    border-radius: .25rem;
+  }
+  .section-header-on-green h5 {
+    color: #ffffff !important;
+    margin: 0;
+    font-weight: 600;
+  }
+  .section-header-on-green .btn-outline-light {
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #ffffff;
+  }
+  .section-header-on-green .btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: #ffffff;
+    color: #ffffff;
+  }
+  .card-body .form-check-input {
+    margin-top: 0;
+    margin-left: 0;
+    margin-right: 2.5rem !important; /* add more space between checkbox and icon */
+    align-self: center;
+  }
+  /* Icons are placed in a fixed-width container next to the checkbox */
+  .card-body .fas {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Nudge icon container slightly to the right */
+  .mfa-icon {
+    margin-left: 1.3rem;
+  }
+  .d-flex.align-items-center {
+    min-height: 3rem;
+  }
+  /* Equal height cards in the options grid */
+  .mfa-grid > [class^="col-"],
+  .mfa-grid > [class*=" col-"] {
+    display: flex;
+  }
+  .mfa-grid .card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+  /* Apply transitions specifically to option cards */
+  .mfa-option { transition: transform .3s ease, box-shadow .3s ease; cursor: default; }
+  .mfa-grid .card-body {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center; /* vertical centering of row inside */
+    min-height: 110px; /* ensure consistent height across cards */
+  }
+  /* Make inner row fill and align left while centered vertically */
+  .mfa-grid .card-body > .d-flex {
+    width: 100%;
+  }
+  /* Hover/focus treatment for richer feel */
+  .mfa-option:hover,
+  .mfa-option:focus-within {
+    transform: translateY(-3px) scale(1.015);
+    box-shadow: 0 .6rem 1.25rem rgba(0,0,0,.10);
+  }
+  /* Mobile tap feedback */
+  .mfa-option:active { transform: translateY(-1px) scale(1.01); }
+  /* Respect users who prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .mfa-option { transition: none; }
+    .mfa-option:hover,
+    .mfa-option:focus-within,
+    .mfa-option:active { transform: none; }
+  }
+  /* Keep title and badge on one line and properly aligned */
+  .card-body h6 {
+    display: flex;
+    align-items: center;
+    margin: 0 0 .25rem 0;
+    font-weight: 600;
+    flex-wrap: nowrap;
+  }
+  /* Make the Required badge an inline pill and prevent full-width stretching */
+  .badge-required {
+    display: inline-block;
+    white-space: nowrap;
+    margin-left: .5rem;
+    font-size: .7rem;
+    line-height: 1;
+    padding: .35rem .5rem;
+    border-radius: .25rem;
+  }
+  @media (max-width: 576px) {
+    .badge-required {
+      font-size: .65rem;
+      padding: .3rem .45rem;
+      margin-left: .4rem;
+    }
+  }
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+  $(function() {
+    const $input = $('#confirmationText');
+    const $btn = $('#confirmSaveBtn');
+    const $form = $('form[method="post"]');
+    function updateState() {
+      const val = ($input.val() || '').toString().toUpperCase().trim();
+      $input.val(val);
+      const enable = val === 'CONFIRM';
+      if (enable) {
+        $btn.prop('disabled', false).removeClass('disabled').attr('aria-disabled', 'false');
+      } else {
+        $btn.prop('disabled', true).addClass('disabled').attr('aria-disabled', 'true');
+      }
+    }
+    $input.on('input keyup change paste', updateState);
+    $('#saveSettingsModal').on('shown.bs.modal', function() {
+      updateState();
+      $input.trigger('focus');
+    });
+    $btn.on('click', function(e) {
+      if ($btn.prop('disabled') || $btn.hasClass('disabled')) {
+        e.preventDefault();
+        return;
+      }
+      $form.trigger('submit');
+    });
+    $('#saveSettingsModal').on('hidden.bs.modal', function () {
+      $input.val('');
+      $btn.prop('disabled', true);
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,364 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}User Details - {{ target.username }}{% endblock %}
+{% block admin_page_name %}User: {{ target.username }}{% endblock %}
+{% block admin_content %}
+  <div class="container py-5 admin-dashboard">
+    <div class="row justify-content-center">
+      <div class="col-md-12">
+        <div class="glass-frame hero-unified mb-4 rounded-3">
+      <div class="row align-items-stretch no-gutters">
+        <div class="col-12 d-flex pr-lg-0">
+          <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+            <div class="hero-body">
+              <span class="badge badge-pill mb-3">Admin</span>
+              <h1 class="display-5 mb-2">User</h1>
+              <p class="text-white-75 mb-0">Details for <strong>{{ target.username }}</strong>{% if target.email %} — {{ target.email }}{% endif %}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+        </div>
+  <div class="modal fade" id="confirmDeactivateModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Confirm Deactivate</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">Type <strong>DEACTIVATE</strong> to confirm.</div>
+        <div class="modal-footer">
+          <input type="text" id="confirmDeactivateText" class="form-control" placeholder="DEACTIVATE" style="text-transform: uppercase;">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-warning" id="confirmDeactivateBtn" data-url="" disabled>Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="confirmPasswordResetModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Confirm Send Password Reset</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">This will send a password reset email to: <strong>{{ target.email|default:'(no email)' }}</strong>. Type SEND to confirm.</div>
+        <div class="modal-footer">
+          <input type="text" id="confirmPwText" class="form-control" placeholder="SEND" style="text-transform: uppercase;">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmPwBtn" data-url="" disabled>Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="confirmDeleteUserModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Confirm Delete User</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">This action is irreversible. Type DELETE to confirm.</div>
+        <div class="modal-footer">
+          <input type="text" id="confirmDeleteText" class="form-control" placeholder="DELETE" style="text-transform: uppercase;">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+    
+    <div class="row">
+      <!-- Card 1: Account -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="section-header section-header-on-green d-flex justify-content-between align-items-center flex-wrap mb-3">
+              <h5 class="mb-2 mb-md-0 text-white">Account</h5>
+            </div>
+            <dl class="row mb-0">
+              <dt class="col-5 col-md-4">Username</dt><dd class="col-7 col-md-8">{{ target.username }}</dd>
+              <dt class="col-5 col-md-4">Email</dt><dd class="col-7 col-md-8">{{ target.email|default:'-' }}</dd>
+              <dt class="col-5 col-md-4">Joined</dt><dd class="col-7 col-md-8">{{ target.date_joined|date:'Y-m-d H:i' }}</dd>
+              <dt class="col-5 col-md-4">Status</dt><dd class="col-7 col-md-8">{% if target.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}</dd>
+              <dt class="col-5 col-md-4">Role</dt>
+              <dd class="col-7 col-md-8">
+                {% if target.is_superuser %}<span class="badge bg-danger">superuser</span>
+                {% elif target.is_staff %}<span class="badge bg-secondary">staff</span>
+                {% else %}<span class="badge bg-light text-dark">user</span>{% endif %}
+              </dd>
+              <dt class="col-5 col-md-4">Phone</dt><dd class="col-7 col-md-8">{{ factors.phone|default:'-' }}</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Actions -->
+      <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <div class="section-header section-header-on-green d-flex justify-content-between align-items-center flex-wrap mb-3">
+              <h5 class="mb-2 mb-md-0 text-white">Actions</h5>
+            </div>
+            <div class="d-flex flex-wrap mb-2" style="gap:10px;">
+              {% csrf_token %}
+              {% if target.is_active %}
+                <button class="btn btn-sm btn-warning btn-rounded-6 js-open-deactivate" data-url="{% url 'mfa:admin_deactivate_user' target.id %}">Deactivate</button>
+              {% else %}
+                <button class="btn btn-sm btn-success btn-rounded-6 js-open-activate" data-url="{% url 'mfa:admin_activate_user' target.id %}">Activate</button>
+              {% endif %}
+              {% if not target.is_superuser %}
+                <button class="btn btn-sm btn-primary btn-rounded-6 js-open-password-reset" data-url="{% url 'mfa:admin_send_password_reset' target.id %}">Send Password Reset</button>
+              {% endif %}
+              <button class="btn btn-sm btn-danger btn-rounded-6 js-confirm-reset-mfa" data-url="{% url 'mfa:admin_reset_mfa' target.id %}">Reset MFA</button>
+              {% if not target.is_superuser %}
+                <form method="post" action="{% url 'mfa:admin_delete_user' target.id %}" class="d-inline" id="deleteForm">
+                  {% csrf_token %}
+                  <button type="button" class="btn btn-sm btn-danger btn-rounded-6 js-open-delete">Delete</button>
+                </form>
+              {% endif %}
+            </div>
+            <p class="text-muted small mb-0">All actions are logged and require CSRF. Staff cannot manage superusers; only superusers can manage staff.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Registered MFA Factors -->
+      <div class="col-md-12 mb-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="section-header section-header-on-green d-flex justify-content-between align-items-center flex-wrap mb-3">
+              <h5 class="mb-2 mb-md-0 text-white">Registered MFA Factors</h5>
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <h6 class="font-weight-bold">Authenticator App (TOTP)</h6>
+                {% if factors.totp %}
+                  <ul class="mb-3">
+                    {% for d in factors.totp %}<li>ID {{ d.id }}{% if d.name %} — {{ d.name }}{% endif %}</li>{% endfor %}
+                  </ul>
+                {% else %}
+                  <div class="text-muted mb-3">None</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6">
+                <h6 class="font-weight-bold">Passkeys</h6>
+                {% if factors.passkeys %}
+                  <ul class="mb-3">
+                    {% for p in factors.passkeys %}<li>ID {{ p.id }}{% if p.name %} — {{ p.name }}{% endif %}</li>{% endfor %}
+                  </ul>
+                {% else %}
+                  <div class="text-muted mb-3">None</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6">
+                <h6 class="font-weight-bold">Backup Codes (unused)</h6>
+                {% if factors.backup_codes %}
+                  <div class="text-muted mb-2">{{ factors.backup_codes|length }} available</div>
+                {% else %}
+                  <div class="text-muted mb-2">0 available</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Security Risk -->
+      <div class="col-md-12 mb-4">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="section-header section-header-on-green d-flex justify-content-between align-items-center flex-wrap mb-3">
+              <h5 class="mb-2 mb-md-0 text-white">Security Risk</h5>
+            </div>
+            <div>
+              <span id="riskBadge" class="badge bg-secondary">Loading…</span>
+              <span id="riskDetails" class="text-muted small ml-2"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm modals: all require typing uppercase keyword, input auto uppercases and removes spaces -->
+  <div class="modal fade" id="confirmResetMfaModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Confirm Reset MFA</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">This will remove authenticator apps, passkeys, and backup codes for this user. Type RESET to confirm.</div>
+        <div class="modal-footer">
+          <input type="text" id="confirmResetMfaText" class="form-control" placeholder="RESET" style="text-transform: uppercase;">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmResetMfaBtn" disabled>Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="confirmActivateModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Confirm Activate</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body">Type ACTIVATE to confirm.</div>
+        <div class="modal-footer">
+          <input type="text" id="confirmActivateText" class="form-control" placeholder="ACTIVATE" style="text-transform: uppercase;">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" id="confirmActivateBtn" data-url="" disabled>Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <style>
+    .section-header-on-green {
+      background: linear-gradient(135deg, rgba(118,185,87,0.98) 0%, rgba(63,111,44,0.98) 100%);
+      color: #ffffff !important;
+      margin: -1.25rem -1.25rem 0 -1.25rem; /* match .card-body padding */
+      padding: 1.25rem 1.5rem;
+      border-radius: 0.375rem 0.375rem 0 0;
+      overflow: hidden;
+      min-height: 60px;
+    }
+    .section-header-on-green h5 {
+      color: #ffffff !important;
+      margin: 0;
+      font-weight: 600;
+    }
+    .btn-rounded-6 { border-radius: .375rem; }
+  </style>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function(){
+  function getCookie(name){ const m=document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)'); return m?m.pop():''; }
+  function post(url){ return fetch(url,{method:'POST',headers:{'X-CSRFToken':getCookie('csrftoken')}}).then(r=>r.json()); }
+
+  // Helpers
+  function sanitize(v){ return (v||'').toUpperCase().replace(/\s+/g,''); }
+  function bindConfirm(inputEl, btnEl, keyword){
+    function evalState(){ const v = sanitize(inputEl.value); inputEl.value = v; btnEl.disabled = (v !== keyword); }
+    inputEl.addEventListener('input', evalState);
+    inputEl.addEventListener('keyup', evalState);
+    inputEl.addEventListener('change', evalState);
+    inputEl.addEventListener('keydown', function(e){ if(e.key==='Enter' && !btnEl.disabled){ e.preventDefault(); btnEl.click(); } });
+    // initialize
+    evalState();
+  }
+
+  // Openers
+  // Deactivate
+  var $deactivateModal = $('#confirmDeactivateModal');
+  document.querySelectorAll('.js-open-deactivate').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var url = this.getAttribute('data-url');
+      var cBtn = document.getElementById('confirmDeactivateBtn');
+      var input = document.getElementById('confirmDeactivateText');
+      cBtn.setAttribute('data-url', url);
+      input.value = '';
+      cBtn.disabled = true;
+      $deactivateModal.modal('show');
+      setTimeout(function(){ input.focus(); }, 100);
+    });
+  });
+
+  // Activate
+  var $activateModal = $('#confirmActivateModal');
+  document.querySelectorAll('.js-open-activate').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var url = this.getAttribute('data-url');
+      var cBtn = document.getElementById('confirmActivateBtn');
+      var input = document.getElementById('confirmActivateText');
+      cBtn.setAttribute('data-url', url);
+      input.value = '';
+      cBtn.disabled = true;
+      $activateModal.modal('show');
+      setTimeout(function(){ input.focus(); }, 100);
+    });
+  });
+
+  // Password reset
+  var $pwModal = $('#confirmPasswordResetModal');
+  document.querySelectorAll('.js-open-password-reset').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var url = this.getAttribute('data-url');
+      var cBtn = document.getElementById('confirmPwBtn');
+      var input = document.getElementById('confirmPwText');
+      cBtn.setAttribute('data-url', url);
+      input.value = '';
+      cBtn.disabled = true;
+      $pwModal.modal('show');
+      setTimeout(function(){ input.focus(); }, 100);
+    });
+  });
+
+  // Delete
+  var $deleteModal = $('#confirmDeleteUserModal');
+  var delOpenBtn = document.querySelector('.js-open-delete');
+  if (delOpenBtn){
+    delOpenBtn.addEventListener('click', function(){
+      var input = document.getElementById('confirmDeleteText');
+      var cBtn = document.getElementById('confirmDeleteBtn');
+      input.value = '';
+      cBtn.disabled = true;
+      $deleteModal.modal('show');
+      setTimeout(function(){ input.focus(); }, 100);
+    });
+  }
+
+  // Reset MFA open
+  var resetOpenBtn = document.querySelector('.js-confirm-reset-mfa');
+  var $resetModal = $('#confirmResetMfaModal');
+  if (resetOpenBtn){
+    resetOpenBtn.addEventListener('click', function(){
+      var input = document.getElementById('confirmResetMfaText');
+      var cBtn = document.getElementById('confirmResetMfaBtn');
+      input.value = '';
+      cBtn.disabled = true;
+      $resetModal.modal('show');
+      setTimeout(function(){ input.focus(); }, 100);
+    });
+  }
+
+  // Binders
+  bindConfirm(document.getElementById('confirmDeactivateText'), document.getElementById('confirmDeactivateBtn'), 'DEACTIVATE');
+  bindConfirm(document.getElementById('confirmActivateText'), document.getElementById('confirmActivateBtn'), 'ACTIVATE');
+  bindConfirm(document.getElementById('confirmPwText'), document.getElementById('confirmPwBtn'), 'SEND');
+  bindConfirm(document.getElementById('confirmResetMfaText'), document.getElementById('confirmResetMfaBtn'), 'RESET');
+  bindConfirm(document.getElementById('confirmDeleteText'), document.getElementById('confirmDeleteBtn'), 'DELETE');
+
+  // Confirm click handlers
+  document.getElementById('confirmDeactivateBtn').addEventListener('click', function(){ var url=this.getAttribute('data-url'); if(url){ post(url).then(function(d){ if(d.success){ location.reload(); } else { alert(d.error||'Failed'); } }); } });
+  document.getElementById('confirmActivateBtn').addEventListener('click', function(){ var url=this.getAttribute('data-url'); if(url){ post(url).then(function(d){ if(d.success){ location.reload(); } else { alert(d.error||'Failed'); } }); } });
+  document.getElementById('confirmPwBtn').addEventListener('click', function(){ var url=this.getAttribute('data-url'); if(url){ post(url).then(function(d){ if(d.success){ location.reload(); } else { alert(d.error||'Failed'); } }); } });
+  document.getElementById('confirmResetMfaBtn').addEventListener('click', function(){ var url=document.querySelector('.js-confirm-reset-mfa').getAttribute('data-url'); if(url){ post(url).then(function(d){ if(d.success){ location.reload(); } else { alert(d.error||'Failed'); } }); } });
+  document.getElementById('confirmDeleteBtn').addEventListener('click', function(){ document.getElementById('deleteForm').submit(); });
+
+  // Fetch Security Risk for this user
+  try {
+    fetch('{% url "mfa:admin_api_user_security_score" target.id %}')
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (!d || d.error) return;
+        var badge = document.getElementById('riskBadge');
+        var details = document.getElementById('riskDetails');
+        if (badge){
+          badge.classList.remove('bg-secondary','bg-success','bg-info','bg-warning','bg-danger');
+          var color = d.risk_color ? 'bg-'+d.risk_color : 'bg-success';
+          badge.classList.add(color);
+          badge.textContent = d.risk_level || 'Low';
+        }
+        if (details){
+          var txt = 'Score: '+(d.risk_score||0)+'/100';
+          if (d.recent_failures) txt += ' • '+d.recent_failures+' recent failures';
+          if (typeof d.has_mfa !== 'undefined') txt += ' • MFA: '+(d.has_mfa ? 'Yes' : 'No');
+          details.textContent = txt;
+        }
+      })
+      .catch(function(err){ console.warn('risk fetch failed', err); });
+  } catch (e) { console.warn('risk init error', e); }
+})();
+</script>
+{% endblock %}

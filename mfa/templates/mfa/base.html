@@ -1,0 +1,227 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MySite{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'mfa/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'mfa/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'mfa/css/style.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400,1,500;1,600;1,700;1,800&display=swap" rel="stylesheet" />
+    <link rel="shortcut icon" href="{% static 'images/icon.png' %}" type="image/x-icon" />
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-current-user-id="{{ request.user.id|default:'' }}">
+    {% block content %}{% endblock %}
+    <button id="backToTopBtn" class="back-to-top" type="button" aria-label="Back to top">
+        <i class="fas fa-chevron-up" aria-hidden="true"></i>
+    </button>
+    <script src="{% static 'mfa/js/jquery-3.6.0.min.js' %}"></script>
+    <script src="{% static 'mfa/js/popper.min.js' %}"></script>
+    <script src="{% static 'mfa/js/bootstrap.min.js' %}"></script>
+    <script>
+      (function(){
+        function positionInvalidFor(input, icon){
+          try {
+            var group = input.closest('.mb-3') || input.parentElement;
+            if (!group || !icon) return;
+            var iRect = input.getBoundingClientRect();
+            var gRect = group.getBoundingClientRect();
+            var top = (iRect.top - gRect.top) + (input.offsetHeight / 2);
+            icon.style.top = top + 'px';
+          } catch(_){}
+        }
+        function shouldShowInvalidIcon(input){
+          var t = (input.type || '').toLowerCase();
+          var nm = (input.name || '').toLowerCase();
+          var id = (input.id || '').toLowerCase();
+          if (input.matches('[data-no-invalid-icon], .no-invalid-icon')) return false;
+          if (t === 'hidden') return false;
+          var grp = input.closest && input.closest('.mb-3');
+          if (grp && grp.querySelector('.g-recaptcha, .cf-turnstile')) return false;
+          /* Allow invalid icon on email fields too */
+          if (input.matches('.otp-box')) return false;
+          if (nm.includes('code') || id.includes('code') || nm.includes('otp') || id.includes('otp')) return false;
+          if (nm === 'g-recaptcha-response' || nm === 'cf-turnstile-response') return false;
+          if (input.closest('.g-recaptcha, .cf-turnstile')) return false;
+          return true;
+        }
+        function showCaptchaError(container, message){
+          if (!container) return;
+          var parent = container.closest('.mb-3') || container;
+          if (parent){
+            parent.querySelectorAll('.invalid-icon').forEach(function(el){ el.remove(); });
+            parent.querySelectorAll('.client-error:not(.captcha-error)').forEach(function(el){ el.remove(); });
+          }
+          var holder = container.querySelector('.client-error.captcha-error');
+          if (!holder){
+            holder = document.createElement('div');
+            holder.className = 'text-danger small mt-1 client-error captcha-error';
+            container.appendChild(holder);
+          }
+          holder.textContent = message || 'Please complete the security challenge.';
+        }
+        function clearCaptchaError(container){
+          if (!container) return;
+          var holder = container.querySelector('.client-error.captcha-error');
+          if (holder) holder.remove();
+        }
+        function showClientError(input, message){
+          input.classList.add('is-invalid');
+          var group = input.closest('.mb-3') || input.parentElement;
+          if (!group) return;
+          group.classList.add('has-invalid');
+          var holder = group.querySelector('.client-error');
+          if (!holder){
+            holder = document.createElement('div');
+            holder.className = 'text-danger small mt-1 client-error';
+            group.appendChild(holder);
+          }
+          holder.textContent = message || 'This field is required.';
+          if (shouldShowInvalidIcon(input)){
+            var icon = group.querySelector('.invalid-icon');
+            if (!icon){
+              icon = document.createElement('i');
+              icon.className = 'fas fa-exclamation-circle invalid-icon';
+              icon.setAttribute('aria-hidden', 'true');
+              group.appendChild(icon);
+            }
+            positionInvalidFor(input, icon);
+          }
+        }
+        function clearInvalid(input){
+          input.classList.remove('is-invalid');
+          var group = input.closest('.mb-3') || input.parentElement;
+          if (!group) return;
+          var holder = group.querySelector('.client-error');
+          if (holder) holder.remove();
+          var icon = group.querySelector('.invalid-icon');
+          if (icon) icon.remove();
+          group.classList.remove('has-invalid');
+        }
+        function needsValue(el){
+          if (el.disabled || el.readOnly) return false;
+          try {
+            var form = el.closest && el.closest('form');
+            var role = form && (form.getAttribute('role')||'').toLowerCase();
+            if (form && (role === 'search' || form.hasAttribute('data-no-client-validate'))) return false;
+          } catch(_){ }
+          var type = (el.type || '').toLowerCase();
+          var tag = (el.tagName || '').toLowerCase();
+          var nm = (el.name || '').toLowerCase();
+          if (type === 'hidden') return false;
+          if (nm === 'g-recaptcha-response' || nm === 'cf-turnstile-response') return false;
+          if (el.closest && el.closest('.g-recaptcha, .cf-turnstile')) return false;
+          var grp = el.closest && el.closest('.mb-3');
+          if (grp && grp.querySelector('.g-recaptcha, .cf-turnstile')) return false;
+          var likely = ['text','password','email','number','tel','url','search'];
+          return el.required || (tag === 'input' && likely.indexOf(type) !== -1) || tag === 'textarea';
+        }
+        document.addEventListener('submit', function(e){
+          var form = e.target;
+          if (!(form instanceof HTMLFormElement)) return;
+          var role = (form.getAttribute('role')||'').toLowerCase();
+          if (role === 'search' || form.hasAttribute('data-no-client-validate')) return; // skip client validation for search/filter forms
+          var inputs = Array.prototype.slice.call(form.querySelectorAll('input, textarea, select'));
+          var hasError = false;
+          inputs.forEach(function(inp){
+            if (!needsValue(inp)) return;
+            clearInvalid(inp);
+            var val = (inp.value || '').trim();
+            if (!val){
+              showClientError(inp, 'This field is required.');
+              hasError = true;
+            }
+          });
+          var captchaContainers = [];
+          var recaptcha = form.querySelector('.g-recaptcha');
+          var turnstile = form.querySelector('.cf-turnstile');
+          if (recaptcha) captchaContainers.push(recaptcha);
+          if (turnstile) captchaContainers.push(turnstile);
+          if (captchaContainers.length){
+            var recaptchaResp = form.querySelector('textarea[name="g-recaptcha-response"], input[name="g-recaptcha-response"]');
+            var turnstileResp = form.querySelector('input[name="cf-turnstile-response"]');
+            var solved = false;
+            if (recaptchaResp && (recaptchaResp.value||'').trim().length > 0) solved = true;
+            if (turnstileResp && (turnstileResp.value||'').trim().length > 0) solved = true;
+            captchaContainers.forEach(function(c){ clearCaptchaError(c); });
+            if (!solved){
+              var captchaMsg = form.getAttribute('data-captcha-error') || 'Please complete the security challenge.';
+              captchaContainers.forEach(function(c){ showCaptchaError(c, captchaMsg); });
+              hasError = true;
+            }
+          }
+          if (hasError){ e.preventDefault(); }
+        }, true);
+        document.addEventListener('input', function(e){
+          var t = e.target;
+          if (t && (t.matches('input, textarea') )){ clearInvalid(t); }
+        });
+        window.addEventListener('resize', function(){
+          document.querySelectorAll('.invalid-icon').forEach(function(icon){
+            var group = icon.closest('.mb-3') || icon.parentElement;
+            if (!group) return;
+            var input = group.querySelector('input.is-invalid, textarea.is-invalid, select.is-invalid');
+            if (input) positionInvalidFor(input, icon);
+          });
+        });
+      })();
+</script>
+    <script>
+      (function(){
+        var btn = document.getElementById('backToTopBtn');
+        if (!btn) return;
+        var showAt = 200;
+        var ticking = false;
+        function setVisibility(){
+          var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+          if (y > showAt) {
+            btn.classList.add('show');
+          } else {
+            btn.classList.remove('show');
+          }
+        }
+        function supportsNativeSmooth(){
+          return 'scrollBehavior' in document.documentElement.style;
+        }
+        function smoothScrollToTop(duration){
+          var start = window.pageYOffset || document.documentElement.scrollTop || 0;
+          if (start <= 0) return;
+          var startTime = null;
+          var d = Math.max(200, Math.min(duration || 500, 1200));
+          function easeInOutQuad(t){ return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; }
+          function step(ts){
+            if (!startTime) startTime = ts;
+            var progress = Math.min(1, (ts - startTime) / d);
+            var eased = easeInOutQuad(progress);
+            var y = Math.round(start * (1 - eased));
+            window.scrollTo(0, y);
+            if (progress < 1) requestAnimationFrame(step);
+          }
+          requestAnimationFrame(step);
+        }
+        window.addEventListener('scroll', function(){
+          if (!ticking){
+            window.requestAnimationFrame(function(){
+              setVisibility();
+              ticking = false;
+            });
+            ticking = true;
+          }
+        }, { passive: true });
+        setVisibility();
+        btn.addEventListener('click', function(){
+          if (supportsNativeSmooth()) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else {
+            smoothScrollToTop(500);
+          }
+        });
+      })();
+</script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

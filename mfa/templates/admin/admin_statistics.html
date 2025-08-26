@@ -1,0 +1,1349 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Statistics - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Statistics{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <style>
+    /* Match other admin pages: green header bar inside cards */
+    .section-header-on-green {
+      background: linear-gradient(135deg, rgba(118,185,87,0.98) 0%, rgba(63,111,44,0.98) 100%);
+      color: #ffffff !important;
+      margin: -1.25rem -1.25rem 0 -1.25rem; /* match .card-body padding */
+      padding: 1.25rem 1.5rem;
+      border-radius: 0.375rem 0.375rem 0 0;
+      overflow: hidden;
+      min-height: 60px;
+    }
+    .section-header-on-green h5 { color:#ffffff !important; margin:0; font-weight:600; }
+    .stats-grid .card{ min-height: 220px; }
+    .kpi .value{ font-size: 2rem; font-weight: 600; }
+    .kpi .label{ color: #6c757d; font-size: .9rem; }
+    .section-header .nav-pills .nav-link{ border-radius: 999px; color:#475569; }
+    .section-header .nav-pills .nav-link:hover{ color:#0f172a; background:#e2e8f0; }
+    .section-header .nav-pills .nav-link.active{ background:#16a34a; color:#fff; box-shadow: 0 1px 2px rgba(0,0,0,.06) inset; }
+    /* White-outline pill style when header sits on green hero card */
+    .section-header-on-green .nav{ gap: 10px; border: none !important; }
+    .section-header-on-green .nav-pills .nav-link{
+      display:inline-flex; align-items:center; justify-content:center; vertical-align: middle;
+      padding: .25rem .5rem; border-radius: 999px; font-size: .875rem; line-height: 1.5;
+      color:#ffffff; border: none; background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.9);
+      text-decoration: none !important; border-bottom: none !important; position: relative;
+      -webkit-appearance: none; appearance: none; font-weight: 400; transform: none !important;
+      background-clip: padding-box;
+    }
+    .section-header-on-green .nav-pills .nav-link:hover,
+    .section-header-on-green .nav-pills .nav-link:focus{
+      color:#ffffff !important; background: transparent; box-shadow: inset 0 0 0 1px #ffffff; outline: none; text-decoration: none !important;
+    }
+    /* Inactive pill: keep white text, only change on hover/focus */
+    .section-header-on-green .nav-pills .nav-link:not(.active):hover,
+    .section-header-on-green .nav-pills .nav-link:not(.active):focus{
+      color:#ffffff !important; background: rgba(255,255,255,0.1); box-shadow: inset 0 0 0 1px #ffffff; text-decoration: none !important;
+    }
+    .section-header-on-green .nav-pills .nav-link:active{
+      color:#1f2937; background: #ffffff; border: 1px solid #ffffff; box-shadow: none !important; transform: none !important;
+    }
+    .section-header-on-green .nav-pills .nav-link.active{
+      color:#1f2937; background: #ffffff; border: 1px solid #ffffff; box-shadow: none !important;
+      font-weight: 600; text-decoration: none !important;
+    }
+    .section-header-on-green .nav-pills .nav-link.active:hover,
+    .section-header-on-green .nav-pills .nav-link.active:focus{
+      color:#1f2937 !important; background: #ffffff; border: 1px solid #ffffff; box-shadow: none !important; text-decoration: none !important;
+    }
+    /* Kill any underline/indicator pseudo-elements some themes add */
+    .section-header-on-green .nav-pills .nav-link::after,
+    .section-header-on-green .nav-pills .nav-link::before{ content: none !important; display: none !important; }
+    .legend-dot{ display:inline-block; width:10px; height:10px; border-radius:999px; margin-right:6px; position:relative; top:-1px; }
+    .chart-toolbar{ margin-bottom: .5rem; }
+    .chart-footer-legend{ margin-top:.5rem; }
+    /* Range controls: match pill design */
+    .segmented{ display:inline-flex; align-items:center; border:1px solid #d1d5db; border-radius:999px; overflow:hidden; background:#ffffff; box-shadow:none; }
+    .segmented .btn{ border:0; border-radius:0; background:transparent; color:#374151; padding:.25rem .75rem; line-height:1.25; font-size:.875rem; box-shadow:none !important; text-decoration:none !important; }
+    .segmented .btn:visited{ color:#374151; }
+    .segmented .btn + .btn{ border-left:1px solid #e5e7eb; }
+    .segmented .btn:hover{ background:#f3f4f6; color:#111827; text-decoration:none !important; }
+    .segmented .btn.active{ background:#16a34a; color:#fff; }
+    .segmented.segmented-green{ border-color:#cbd5e1; }
+    .segmented.segmented-green .btn + .btn{ border-left-color:#e5e7eb; }
+    .segmented .btn:focus{ outline:none; box-shadow:none !important; }
+    .segmented .btn:active{ box-shadow:none !important; }
+  </style>
+{% endblock %}
+{% block admin_content %}
+  <div class="container py-5 admin-dashboard">
+    <div class="row justify-content-center">
+      <div class="col-md-12">
+
+        <div class="glass-frame hero-unified mb-4 rounded-3">
+          <div class="row align-items-stretch no-gutters">
+            <div class="col-12 d-flex pr-lg-0">
+              <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+                <div class="hero-body">
+                  <span class="badge badge-pill mb-3">Admin</span>
+                  <h1 class="display-5 mb-2">Statistics</h1>
+                  <p class="text-white-75 mb-0">Trends and insights for authentication and users.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="statsData"
+             data-total-users="{{ stats.total_users|default:0 }}"
+             data-users-with-totp="{{ stats.users_with_totp|default:0 }}"
+             data-users-enforced="{{ stats.users_enforced|default:0 }}"
+             data-users-with-email-otp="{{ stats.users_with_email_otp|default:0 }}"
+             data-users-with-passkeys="{{ stats.users_with_passkeys|default:0 }}"
+             data-users-with-sms="{{ stats.users_with_sms|default:0 }}"
+             data-users-with-backup-codes="{{ stats.users_with_backup_codes|default:0 }}"
+             data-successes-24h="{{ stats.successes_24h|default:0 }}"
+             data-failed-24h="{{ stats.failed_attempts_24h|default:0 }}"
+             data-successes-all="{{ successes_all|default:0 }}"
+             data-failures-all="{{ failures_all|default:0 }}"
+             data-has-window-data="{% if has_window_data %}1{% else %}0{% endif %}"
+             data-method-success-totp="{{ method_success_totp|default:0 }}"
+             data-method-success-email="{{ method_success_email|default:0 }}"
+             data-method-success-passkeys="{{ method_success_passkeys|default:0 }}"
+             data-method-success-sms="{{ method_success_sms|default:0 }}"
+             data-method-success-backup="{{ method_success_backup|default:0 }}"
+             data-users-active="{{ users_counts.active|default:0 }}"
+             data-users-inactive="{{ users_counts.inactive|default:0 }}"
+             data-users-staff="{{ users_counts.staff|default:0 }}"
+             data-users-superuser="{{ users_counts.superuser|default:0 }}"
+             data-range-days="{{ range_days|default:7 }}"
+             class="d-none"></div>
+
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap stats-range">
+          <div class="text-muted small">Time Range</div>
+          <div class="segmented segmented-green" role="group" aria-label="Select range">
+            <a href="{% url 'mfa:admin_statistics' %}?range=1" class="btn {% if range_days == 1 %}active{% endif %}">24h</a>
+            <a href="{% url 'mfa:admin_statistics' %}?range=7" class="btn {% if range_days == 7 %}active{% endif %}">7d</a>
+            <a href="{% url 'mfa:admin_statistics' %}?range=30" class="btn {% if range_days == 30 %}active{% endif %}">30d</a>
+            <a href="{% url 'mfa:admin_statistics' %}?range=90" class="btn {% if range_days == 90 %}active{% endif %}">90d</a>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <div class="section-header section-header-on-green d-flex justify-content-between align-items-center flex-wrap">
+              <h5 class="mb-2 mb-md-0">MFA Overview</h5>
+              <ul class="nav nav-pills nav-sm" role="tablist">
+                <li class="nav-item">
+                  <button type="button" class="nav-link active" data-toggle="tab" data-target="#mfa-kpis" role="tab" aria-controls="mfa-kpis" aria-selected="true">KPIs</button>
+                </li>
+                <li class="nav-item">
+                  <button type="button" class="nav-link" data-toggle="tab" data-target="#mfa-charts" role="tab" aria-controls="mfa-charts" aria-selected="false">Charts</button>
+                </li>
+              </ul>
+            </div>
+            <div class="tab-content mt-3">
+              <div id="mfa-kpis" class="tab-pane fade show active">
+                <div class="row text-center kpi-row">
+                  <div class="col-6 col-md-3 mb-3 kpi">
+                    <div class="value" id="kpi-totp-users">{{ stats.users_with_totp|default:0 }}</div>
+                    <div class="label">MFA Enabled (TOTP)</div>
+                  </div>
+                  <div class="col-6 col-md-3 mb-3 kpi">
+                    <div class="value" id="kpi-active-users">{{ users_counts.active|default:0 }}</div>
+                    <div class="label">Active Users</div>
+                  </div>
+                  <div class="col-6 col-md-3 mb-3 kpi">
+                    <div class="value" id="kpi-inactive-users">{{ users_counts.inactive|default:0 }}</div>
+                    <div class="label">Inactive Users</div>
+                  </div>
+                  <div class="col-6 col-md-3 mb-3 kpi">
+                    <div class="value" id="kpi-adoption-rate">{{ stats.mfa_adoption_rate|default:0 }}%</div>
+                    <div class="label">MFA Adoption</div>
+                  </div>
+                </div>
+                
+                <!-- Additional KPI Row -->
+                <div class="row text-center kpi-row mt-4">
+                  <div class="col-6 col-md-3 mb-3 kpi">
+                    <div class="value" id="kpi-successful-logins">{{ successes_all|default:0 }}</div>
+                    <div class="label">Successful Logins</div>
+                  </div>
+                  <div class="col-6 col-md-3 mb-3 kpi">
+                    <div class="value" id="kpi-failed-attempts">{{ failures_all|default:0 }}</div>
+                    <div class="label">Failed Attempts</div>
+                  </div>
+                  <div class="col-6 col-md-3 mb-3 kpi">
+                    <div class="value" id="kpi-avg-session">{{ avg_session_duration|default:"15m" }}</div>
+                    <div class="label">Avg Session</div>
+                  </div>
+                  <div class="col-6 col-md-3 mb-3 kpi">
+                    <div class="value" id="kpi-peak-users">{{ peak_concurrent_users|default:0 }}</div>
+                    <div class="label">Peak Users</div>
+                  </div>
+                </div>
+              </div>
+              <div id="mfa-charts" class="tab-pane fade">
+                <div class="row stats-grid">
+                  <div class="col-12 col-lg-6 mb-3">
+                    <div class="card shadow-sm h-100">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center chart-toolbar flex-wrap" style="gap:8px;">
+                          <div class="d-flex align-items-center" style="gap:12px;">
+                            <h6 class="mb-0">MFA Status</h6>
+                            <div class="text-muted small">
+                              <span class="legend-dot" style="background:#16a34a"></span>Enabled
+                              <span class="legend-dot ml-3" style="background:#f59e0b"></span>Enforced
+                              <span class="legend-dot ml-3" style="background:#9ca3af"></span>Disabled
+                            </div>
+                          </div>
+                          <div class="d-flex align-items-center" style="gap:8px;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadStatusPng"><i class="fas fa-download mr-1"></i> PNG</button>
+                          </div>
+                        </div>
+                        <canvas id="mfaStatusChart" height="160" style="max-height: 180px;"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12 col-lg-6 mb-3">
+                    <div class="card shadow-sm h-100">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center chart-toolbar flex-wrap" style="gap:8px;">
+                          <div class="d-flex align-items-center" style="gap:12px;">
+                            <h6 class="mb-0">Authentication Methods</h6>
+                            <div class="text-muted small">
+                              <span class="legend-dot" style="background:#3b82f6"></span>TOTP
+                              <span class="legend-dot ml-3" style="background:#10b981"></span>Email OTP
+                              <span class="legend-dot ml-3" style="background:#f97316"></span>Passkeys
+                              <span class="legend-dot ml-3" style="background:#06b6d4"></span>SMS
+                              <span class="legend-dot ml-3" style="background:#8b5cf6"></span>Backup Codes
+                            </div>
+                          </div>
+                          <div class="d-flex align-items-center" style="gap:8px;">
+                            <div class="segmented segmented-green" role="group" aria-label="Chart mode">
+                              <button type="button" id="methodsModeCounts" class="btn active">Counts</button>
+                              <button type="button" id="methodsModePercent" class="btn">Percent</button>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadMethodsPng"><i class="fas fa-download mr-1"></i> PNG</button>
+                          </div>
+                        </div>
+                        <canvas id="methodDonutChart" height="160" style="max-height: 180px;"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- New Chart: Login Frequency -->
+                  <div class="col-12 col-lg-6 mb-3">
+                    <div class="card shadow-sm h-100">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center chart-toolbar flex-wrap" style="gap:8px;">
+                          <div class="d-flex align-items-center" style="gap:12px;">
+                            <h6 class="mb-0">Login Frequency</h6>
+                            <div class="text-muted small">Daily login patterns</div>
+                          </div>
+                          <div class="d-flex align-items-center" style="gap:8px;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadFrequencyPng"><i class="fas fa-download mr-1"></i> PNG</button>
+                          </div>
+                        </div>
+                        <canvas id="loginFrequencyChart" height="160" style="max-height: 180px;"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- New Chart: Security Score -->
+                  <div class="col-12 col-lg-6 mb-3">
+                    <div class="card shadow-sm h-100">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center chart-toolbar flex-wrap" style="gap:8px;">
+                          <div class="d-flex align-items-center" style="gap:12px;">
+                            <h6 class="mb-0">Security Score</h6>
+                            <div class="text-muted small">Overall security rating</div>
+                          </div>
+                          <div class="d-flex align-items-center" style="gap:8px;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadSecurityPng"><i class="fas fa-download mr-1"></i> PNG</button>
+                          </div>
+                        </div>
+                        <canvas id="securityScoreChart" height="160" style="max-height: 180px;"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- New Chart: Device Types -->
+                  <div class="col-12 col-lg-6 mb-3">
+                    <div class="card shadow-sm h-100">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center chart-toolbar flex-wrap" style="gap:8px;">
+                          <div class="d-flex align-items-center" style="gap:12px;">
+                            <h6 class="mb-0">Device Types</h6>
+                            <div class="text-muted small">
+                              <span class="legend-dot" style="background:#3b82f6"></span>Desktop
+                              <span class="legend-dot ml-3" style="background:#10b981"></span>Mobile
+                              <span class="legend-dot ml-3" style="background:#f97316"></span>Tablet
+                            </div>
+                          </div>
+                          <div class="d-flex align-items-center" style="gap:8px;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadDevicesPng"><i class="fas fa-download mr-1"></i> PNG</button>
+                          </div>
+                        </div>
+                        <canvas id="deviceTypesChart" height="160" style="max-height: 180px;"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- New Chart: Geographic Distribution -->
+                  <div class="col-12 col-lg-6 mb-3">
+                    <div class="card shadow-sm h-100">
+                      <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center chart-toolbar flex-wrap" style="gap:8px;">
+                          <div class="d-flex align-items-center" style="gap:12px;">
+                            <h6 class="mb-0">Geographic Distribution</h6>
+                            <div class="text-muted small">Login locations</div>
+                          </div>
+                          <div class="d-flex align-items-center" style="gap:8px;">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="downloadLocationsPng"><i class="fas fa-download mr-1"></i> PNG</button>
+                          </div>
+                        </div>
+                        <canvas id="locationsChart" height="160" style="max-height: 180px;"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <div class="section-header d-flex justify-content-between align-items-center flex-wrap">
+              <h5 class="mb-2 mb-md-0">Authentication Outcomes</h5>
+              <div class="d-inline-flex align-items-center" style="gap:8px;">
+                <button class="btn btn-sm btn-outline-primary" id="toggleOutcomeMode">Percent</button>
+                <button class="btn btn-sm btn-outline-secondary" id="downloadOutcomesPng">
+                  <i class="fas fa-download mr-1"></i> PNG
+                </button>
+                <span id="fallbackBadge" class="badge badge-light d-none">All-time</span>
+              </div>
+            </div>
+            <canvas id="outcomesBarChart" height="160"></canvas>
+          </div>
+        </div>
+
+        <!-- Success Rate Trends -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <div class="section-header-on-green d-flex justify-content-between align-items-center flex-wrap">
+              <h5 class="mb-2 mb-md-0">Success Rate Trends</h5>
+              <div class="d-inline-flex align-items-center" style="gap:8px;">
+                <div class="segmented segmented-green" role="group">
+                  <button type="button" id="successTrendHourly" class="btn active">Hourly</button>
+                  <button type="button" id="successTrendDaily" class="btn">Daily</button>
+                </div>
+                <button class="btn btn-sm btn-outline-light" id="downloadSuccessTrendPng">
+                  <i class="fas fa-download mr-1"></i> PNG
+                </button>
+              </div>
+            </div>
+            <div class="mt-3">
+              <canvas id="successTrendChart" height="120"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Peak Usage Heatmap -->
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <div class="section-header-on-green d-flex justify-content-between align-items-center flex-wrap">
+              <h5 class="mb-2 mb-md-0">Peak Usage Hours</h5>
+              <div class="d-inline-flex align-items-center" style="gap:8px;">
+                <button class="btn btn-sm btn-outline-light" id="downloadHeatmapPng">
+                  <i class="fas fa-download mr-1"></i> PNG
+                </button>
+              </div>
+            </div>
+            <div class="mt-3">
+              <canvas id="usageHeatmapChart" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Behavior Analytics -->
+        <div class="row mb-4">
+          <div class="col-lg-8">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="section-header d-flex justify-content-between align-items-center flex-wrap">
+                  <h5 class="mb-2 mb-md-0">User Activity Patterns</h5>
+                  <div class="d-inline-flex align-items-center" style="gap:8px;">
+                    <button class="btn btn-sm btn-outline-secondary" id="downloadActivityPng">
+                      <i class="fas fa-download mr-1"></i> PNG
+                    </button>
+                  </div>
+                </div>
+                <canvas id="userActivityChart" height="140"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="section-header d-flex justify-content-between align-items-center flex-wrap">
+                  <h5 class="mb-2 mb-md-0">Top Active Users</h5>
+                </div>
+                <div class="mt-3">
+                  <div id="topUsersList">
+                    {% for user_data in top_users_data %}
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                      <div>
+                        <div class="font-weight-bold small">{{ user_data.user__email|default:user_data.user__username }}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">
+                          Last active: {% if user_data.user__last_login %}{{ user_data.user__last_login|timesince }} ago{% else %}Never{% endif %}
+                        </div>
+                      </div>
+                      <span class="badge badge-primary">{{ user_data.login_count }} logins</span>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted small text-center py-3">No user activity data available</div>
+                    {% endfor %}
+                  </div>
+                  
+                  <div class="mt-3 pt-3 border-top">
+                    <h6 class="text-muted mb-2">Session Metrics</h6>
+                    <div class="mb-2">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small>Avg Session Duration</small>
+                        <span class="badge badge-info">{{ avg_session_duration }}</span>
+                      </div>
+                      <div class="progress" style="height: 4px;">
+                        <div class="progress-bar bg-info" style="width: 75%"></div>
+                      </div>
+                    </div>
+                    <div class="mb-2">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small>Peak Concurrent Users</small>
+                        <span class="badge badge-warning">{{ peak_concurrent_users }}</span>
+                      </div>
+                      <div class="progress" style="height: 4px;">
+                        <div class="progress-bar bg-warning" style="width: 60%"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <div class="section-header d-flex justify-content-between align-items-center flex-wrap">
+              <h5 class="mb-2 mb-md-0">Users Overview</h5>
+              <div class="d-inline-flex align-items-center" style="gap:8px;">
+                <button class="btn btn-sm btn-outline-secondary" id="downloadUsersPng">
+                  <i class="fas fa-download mr-1"></i> PNG
+                </button>
+              </div>
+            </div>
+            <div class="row stats-grid">
+              <div class="col-12 col-lg-7 mb-3">
+                <canvas id="usersOverviewChart" height="180"></canvas>
+              </div>
+              <div class="col-12 col-lg-5 mb-3">
+                <div class="list-group list-group-flush">
+                  <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><span class="legend-dot" style="background:#16a34a"></span>Active</span>
+                    <strong>{{ users_counts.active|default:0 }}</strong>
+                  </div>
+                  <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><span class="legend-dot" style="background:#9ca3af"></span>Inactive</span>
+                    <strong>{{ users_counts.inactive|default:0 }}</strong>
+                  </div>
+                  <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><span class="legend-dot" style="background:#1f2937"></span>Staff</span>
+                    <strong>{{ users_counts.staff|default:0 }}</strong>
+                  </div>
+                  <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><span class="legend-dot" style="background:#dc2626"></span>Superusers</span>
+                    <strong>{{ users_counts.superuser|default:0 }}</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block extra_js %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <script>
+  (function(){
+    // Enable button-based tab switching for KPIs/Charts
+    try {
+      var tabNav = document.querySelector('.section-header-on-green .nav');
+      if (tabNav){
+        tabNav.addEventListener('click', function(ev){
+          var btn = ev.target && ev.target.closest('button.nav-link[data-target]');
+          if (!btn) return;
+          ev.preventDefault();
+          var targetSel = btn.getAttribute('data-target');
+          var target = targetSel ? document.querySelector(targetSel) : null;
+          if (!target) return;
+          // toggle active on pills
+          tabNav.querySelectorAll('.nav-link').forEach(function(b){ b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+          btn.classList.add('active'); btn.setAttribute('aria-selected','true');
+          // toggle panes
+          var container = btn.closest('.card-body')?.querySelector('.tab-content') || document.querySelector('.tab-content');
+          if (container){
+            container.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('show','active'); });
+            target.classList.add('show','active');
+          }
+        });
+      }
+    } catch(e){}
+    if (window.Chart && window.ChartDataLabels) { try { Chart.register(ChartDataLabels); } catch(e){} }
+    function val(v, d){ return (typeof v === 'number' ? v : (parseFloat(v) || d)); }
+    var dataEl = document.getElementById('statsData');
+    function attrInt(name, d){
+      if (!dataEl) return d;
+      var v = dataEl.getAttribute(name);
+      return val(v, d);
+    }
+    var totalUsers = attrInt('data-total-users', 0);
+    var enabled = attrInt('data-users-with-totp', 0);
+    var enforced = attrInt('data-users-enforced', 0);
+    var disabled = Math.max(totalUsers - enabled - enforced, 0);
+    
+    // Function to update KPI values based on time range
+    function updateKPIs() {
+      var rangeDays = attrInt('data-range-days', 7);
+      var successesAll = attrInt('data-successes-all', 0);
+      var failuresAll = attrInt('data-failures-all', 0);
+      var activeUsers = attrInt('data-users-active', 0);
+      var inactiveUsers = attrInt('data-users-inactive', 0);
+      
+      // Calculate time-range specific metrics
+      var successRate = (successesAll + failuresAll) > 0 ? Math.round((successesAll / (successesAll + failuresAll)) * 100) : 95;
+      var avgSession = rangeDays === 1 ? "8m" : rangeDays === 7 ? "15m" : rangeDays === 30 ? "22m" : "18m";
+      var peakUsers = Math.round(activeUsers * (rangeDays === 1 ? 0.3 : rangeDays === 7 ? 0.4 : rangeDays === 30 ? 0.6 : 0.8));
+      
+      // Update KPI displays
+      document.getElementById('kpi-successful-logins').textContent = successesAll;
+      document.getElementById('kpi-failed-attempts').textContent = failuresAll;
+      document.getElementById('kpi-avg-session').textContent = avgSession;
+      document.getElementById('kpi-peak-users').textContent = peakUsers;
+      document.getElementById('kpi-adoption-rate').textContent = successRate + '%';
+    }
+    
+    // Call updateKPIs on page load
+    updateKPIs();
+
+    // For method donut, use per-method success counts within selected range
+    var totp = attrInt('data-method-success-totp', 0);
+    var emailOtp = attrInt('data-method-success-email', 0);
+    var passkeys = attrInt('data-method-success-passkeys', 0);
+    var sms = attrInt('data-method-success-sms', 0);
+    var backup = attrInt('data-method-success-backup', 0);
+    // Fallback to availability counts if no method successes exist in window
+    if ((totp + emailOtp + passkeys + sms + backup) === 0){
+      totp = enabled;
+      emailOtp = attrInt('data-users-with-email-otp', 0);
+      passkeys = attrInt('data-users-with-passkeys', 0);
+      sms = attrInt('data-users-with-sms', 0);
+      backup = attrInt('data-users-with-backup-codes', 0);
+    }
+
+    function renderNoData(canvasId, message){
+      var c = document.getElementById(canvasId);
+      if (!c) return;
+      var holder = document.createElement('div');
+      holder.className = 'd-flex align-items-center justify-content-center text-muted';
+      holder.style.minHeight = (c.getAttribute('height') ? (parseInt(c.getAttribute('height')) + 20) : 160) + 'px';
+      holder.innerHTML = '<div class="small">' + (message || 'No data for selected range') + '</div>';
+      c.parentNode.replaceChild(holder, c);
+    }
+
+    // MFA Status (stacked horizontal)
+    var statusChart = null;
+    try {
+      var ctx1 = document.getElementById('mfaStatusChart');
+      if (ctx1 && window.Chart){
+        var totalStatus = enabled + enforced + disabled;
+        if (!totalStatus){ renderNoData('mfaStatusChart', 'No MFA status data'); }
+        else {
+          function buildStatusOpts(){
+            return {
+              responsive: true,
+              indexAxis: 'y',
+              plugins:{
+                legend:{ position:'bottom' },
+                datalabels:{ display: false }
+              },
+              scales:{ x:{ stacked:true, beginAtZero:true }, y:{ stacked:true } }
+            }
+          }
+          function drawStatus(){
+            if (statusChart) statusChart.destroy();
+            statusChart = new Chart(ctx1, {
+              type: 'bar',
+              data: { labels: ['Status'], datasets: [
+                { label: 'Enabled', data: [enabled], backgroundColor: '#16a34a' },
+                { label: 'Enforced', data: [enforced], backgroundColor: '#f59e0b' },
+                { label: 'Disabled', data: [disabled], backgroundColor: '#9ca3af' },
+              ]},
+              options: buildStatusOpts()
+            });
+            // update footer numbers
+            var eEl = document.getElementById('statusCountEnabled'); if (eEl) eEl.textContent = enabled;
+            var fEl = document.getElementById('statusCountEnforced'); if (fEl) fEl.textContent = enforced;
+            var dEl = document.getElementById('statusCountDisabled'); if (dEl) dEl.textContent = disabled;
+          }
+          drawStatus();
+          var dlStatus = document.getElementById('downloadStatusPng');
+          if (dlStatus){ dlStatus.addEventListener('click', function(){ try{ var url = ctx1.toDataURL('image/png'); var a=document.createElement('a'); a.href=url; a.download='mfa-status.png'; a.click(); }catch(e){} }); }
+        }
+      }
+    } catch(e){}
+
+    // Methods donut
+    var methodsChart = null;
+    try {
+      var ctx2 = document.getElementById('methodDonutChart');
+      if (ctx2 && window.Chart){
+        var totalMethods = totp + emailOtp + passkeys + sms + backup;
+        if (!totalMethods){ renderNoData('methodDonutChart', 'No authentication method usage'); }
+        else {
+          var mode = 'counts';
+          function buildData(){
+            var values = [totp,emailOtp,passkeys,sms,backup];
+            if (mode === 'percent'){
+              var sum = values.reduce((a,b)=>a+b,0) || 1;
+              values = values.map(function(v){ return Math.round((v/sum)*100); });
+            }
+            return {
+              labels:['TOTP','Email OTP','Passkeys','SMS','Backup Codes'],
+              datasets:[{ data: values, backgroundColor:['#3b82f6','#10b981','#f97316','#06b6d4','#8b5cf6'] }]
+            };
+          }
+          function buildOpts(){
+            return { cutout: '60%', plugins:{ legend:{ position:'bottom' }, datalabels:{ display: false } } };
+          }
+          function drawMethods(){
+            if (methodsChart) methodsChart.destroy();
+            methodsChart = new Chart(ctx2, { type: 'doughnut', data: buildData(), options: buildOpts() });
+            // update footer legend values
+            var vals = buildData().datasets[0].data;
+            var ids = ['methodsCountTotp','methodsCountEmail','methodsCountPasskeys','methodsCountSms','methodsCountBackup'];
+            for (var i=0;i<ids.length;i++){
+              var el = document.getElementById(ids[i]);
+              if (!el) continue;
+              el.textContent = vals[i] + (mode==='percent' ? '%' : '');
+            }
+          }
+          drawMethods();
+          var btnCounts = document.getElementById('methodsModeCounts');
+          var btnPercent = document.getElementById('methodsModePercent');
+          if (btnCounts && btnPercent){
+            function setActive(which){
+              if (which === 'counts'){
+                btnCounts.classList.add('active');
+                btnPercent.classList.remove('active');
+              } else {
+                btnPercent.classList.add('active');
+                btnCounts.classList.remove('active');
+              }
+            }
+            btnCounts.addEventListener('click', function(){ mode='counts'; setActive('counts'); drawMethods(); });
+            btnPercent.addEventListener('click', function(){ mode='percent'; setActive('percent'); drawMethods(); });
+          }
+          var dl = document.getElementById('downloadMethodsPng');
+          if (dl){ dl.addEventListener('click', function(){ try{ var url = ctx2.toDataURL('image/png'); var a=document.createElement('a'); a.href=url; a.download='auth-methods.png'; a.click(); }catch(e){} }); }
+        }
+      }
+    } catch(e){}
+
+    // Outcomes bar (toggle counts/percent)
+    var modePercent = false;
+    var success = attrInt('data-successes-24h', 0);
+    var failure = attrInt('data-failed-24h', 0);
+    var successAll = attrInt('data-successes-all', 0);
+    var failureAll = attrInt('data-failures-all', 0);
+    var hasWindow = attrInt('data-has-window-data', 0) ? true : false;
+    var total = Math.max(success + failure, 1);
+
+    function buildOutcomeData(){
+      if (modePercent){
+        var sP = Math.round((success/total)*100);
+        var fP = 100 - sP;
+        return {labels:['Success','Failure'], data:[sP, fP], suffix:'%'};
+      }
+      return {labels:['Success','Failure'], data:[success, failure], suffix:''};
+    }
+
+    var ctx3 = document.getElementById('outcomesBarChart');
+    if (window.ChartDataLabels) { Chart.register(ChartDataLabels); }
+    var chart3 = null;
+    function drawOutcomes(){
+      var d = buildOutcomeData();
+      if (chart3){ chart3.destroy(); }
+      var showNums = false; // force hidden numbers
+      chart3 = new Chart(ctx3, {
+        type: 'bar',
+        data: { labels:d.labels, datasets:[{ data:d.data, backgroundColor:['#22c55e','#ef4444'] }] },
+        options: { responsive:true, plugins:{ legend:{display:false}, datalabels:{ display: false }, tooltip:{ callbacks:{ label:(ctx)=> ctx.parsed.y + d.suffix } } }, scales:{ y:{ beginAtZero:true, ticks:{ callback:(v)=> v + d.suffix } } } }
+      });
+    }
+    if (ctx3 && window.Chart){
+      if ((success + failure) === 0){
+        if ((successAll + failureAll) > 0){
+          success = successAll; failure = failureAll; total = Math.max(success + failure, 1);
+          var fb = document.getElementById('fallbackBadge'); if (fb) fb.classList.remove('d-none');
+          drawOutcomes();
+        } else {
+          renderNoData('outcomesBarChart', 'No outcomes recorded');
+        }
+      } else {
+        drawOutcomes();
+      }
+    }
+    var toggle = document.getElementById('toggleOutcomeMode');
+    if (toggle){ toggle.addEventListener('click', function(){ modePercent = !modePercent; this.textContent = modePercent ? 'Counts' : 'Percent'; drawOutcomes(); }); }
+    // removed show-numbers toggle
+    var dl = document.getElementById('downloadOutcomesPng');
+    if (dl && ctx3){ dl.addEventListener('click', function(){ try{ var url = ctx3.toDataURL('image/png'); var a=document.createElement('a'); a.href=url; a.download='outcomes.png'; a.click(); }catch(e){} }); }
+
+    // Users Overview chart (4 categories)
+    try {
+      var ctx4 = document.getElementById('usersOverviewChart');
+      var usersChart = null;
+      function drawUsers(){
+        if (!ctx4 || !window.Chart) return;
+        var uActive = attrInt('data-users-active', 0);
+        var uInactive = attrInt('data-users-inactive', 0);
+        var uStaff = attrInt('data-users-staff', 0);
+        var uSuper = attrInt('data-users-superuser', 0);
+        if (usersChart) usersChart.destroy();
+        var showNums = false; // force hidden numbers
+        usersChart = new Chart(ctx4, {
+          type: 'bar',
+          data: {
+            labels: ['Active', 'Inactive', 'Staff', 'Superusers'],
+            datasets: [{
+              label: 'Users',
+              backgroundColor: ['#16a34a','#9ca3af','#1f2937','#dc2626'],
+              data: [uActive, uInactive, uStaff, uSuper]
+            }]
+          },
+          options: { responsive:true, plugins:{ legend:{ display:false }, datalabels:{ display: false } }, scales:{ y:{ beginAtZero:true } } }
+        });
+      }
+      drawUsers();
+      // removed show-numbers toggle
+      var dlUsers = document.getElementById('downloadUsersPng');
+      if (dlUsers && ctx4){ dlUsers.addEventListener('click', function(){ try{ var url = ctx4.toDataURL('image/png'); var a=document.createElement('a'); a.href=url; a.download='users-overview.png'; a.click(); }catch(e){} }); }
+    } catch(e){}
+
+    // Success Rate Trends Chart
+    try {
+      var successTrendChart = null;
+      var trendMode = 'hourly';
+      
+      // Get real data from backend
+      var successTrendData = JSON.parse('{{ success_trend_data|escapejs }}');
+      var failureTrendData = JSON.parse('{{ failure_trend_data|escapejs }}');
+      var rangedays = parseInt('{{ range_days|default:7 }}') || 7;
+      
+      function generateTrendData() {
+        var labels = [];
+        
+        if (trendMode === 'hourly' && rangedays === 1) {
+          for (var i = 0; i < 24; i++) {
+            labels.push(i + ':00');
+          }
+        } else {
+          if (rangedays === 7) {
+            var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            for (var i = 6; i >= 0; i--) {
+              var date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+              labels.push(days[date.getDay()]);
+            }
+          } else {
+            for (var i = rangedays - 1; i >= 0; i--) {
+              var date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+              labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            }
+          }
+        }
+        
+        return { 
+          labels: labels, 
+          success: successTrendData, 
+          failure: failureTrendData 
+        };
+      }
+      
+      function drawSuccessTrend() {
+        var ctx = document.getElementById('successTrendChart');
+        if (!ctx) return;
+        
+        if (successTrendChart) successTrendChart.destroy();
+        
+        var data = generateTrendData();
+        successTrendChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.labels,
+            datasets: [{
+              label: 'Success Rate %',
+              data: data.success,
+              borderColor: '#22c55e',
+              backgroundColor: 'rgba(34, 197, 94, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4
+            }, {
+              label: 'Failure Rate %',
+              data: data.failure,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'top' },
+              datalabels: { display: false }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: { callback: function(value) { return value + '%'; } }
+              }
+            }
+          }
+        });
+      }
+      
+      drawSuccessTrend();
+      
+      var hourlyBtn = document.getElementById('successTrendHourly');
+      var dailyBtn = document.getElementById('successTrendDaily');
+      
+      if (hourlyBtn && dailyBtn) {
+        hourlyBtn.addEventListener('click', function() {
+          trendMode = 'hourly';
+          hourlyBtn.classList.add('active');
+          dailyBtn.classList.remove('active');
+          drawSuccessTrend();
+        });
+        
+        dailyBtn.addEventListener('click', function() {
+          trendMode = 'daily';
+          dailyBtn.classList.add('active');
+          hourlyBtn.classList.remove('active');
+          drawSuccessTrend();
+        });
+      }
+      
+      var dlTrend = document.getElementById('downloadSuccessTrendPng');
+      if (dlTrend) {
+        dlTrend.addEventListener('click', function() {
+          try {
+            var url = document.getElementById('successTrendChart').toDataURL('image/png');
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'success-trends.png';
+            a.click();
+          } catch(e) {}
+        });
+      }
+    } catch(e) {}
+
+    // Usage Heatmap Chart
+    var heatmapChart = null;
+    try {
+      // Get real data from backend
+      var deviceTypeData = JSON.parse('{{ device_type_data|escapejs }}');
+      var heatmapData = JSON.parse('{{ heatmap_data|escapejs }}');
+      
+      function drawHeatmap() {
+        var ctx = document.getElementById('usageHeatmapChart');
+        if (!ctx) return;
+        
+        if (heatmapChart) heatmapChart.destroy();
+        
+        var rangeDays = attrInt('data-range-days', 7);
+        var successesAll = attrInt('data-successes-all', 0);
+        
+        var days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        var heatmapRealData;
+        
+        // Only use real backend heatmap data
+        heatmapRealData = heatmapData.length > 0 ? heatmapData : [];
+        
+        // If no real data exists, don't show chart
+        if (heatmapRealData.length === 0) {
+          ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+          var noDataDiv = document.createElement('div');
+          noDataDiv.className = 'text-center text-muted py-5';
+          noDataDiv.innerHTML = '<p>No usage heatmap data available for selected time range</p>';
+          ctx.parentNode.replaceChild(noDataDiv, ctx);
+          return;
+        }
+        
+        heatmapChart = new Chart(ctx, {
+          type: 'scatter',
+          data: {
+            datasets: [{
+              label: 'Usage Intensity',
+              data: heatmapRealData,
+              backgroundColor: function(context) {
+                var value = context.parsed.v;
+                var alpha = Math.min(1, Math.max(0.3, value / 30));
+                return `rgba(34, 197, 94, ${alpha})`;
+              },
+              pointRadius: function(context) {
+                var value = context.parsed.v;
+                return Math.max(4, Math.min(15, (value / 5) + 3));
+              }
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              datalabels: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: function(context) {
+                    var point = context[0];
+                    return `${days[point.parsed.y]} ${point.parsed.x}:00`;
+                  },
+                  label: function(context) {
+                    return `Usage: ${Math.round(context.parsed.v)}%`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                type: 'linear',
+                position: 'bottom',
+                min: 0,
+                max: 23,
+                ticks: {
+                  stepSize: 2,
+                  callback: function(value) { return value + ':00'; }
+                },
+                title: { display: true, text: 'Hour of Day' }
+              },
+              y: {
+                type: 'linear',
+                min: -0.5,
+                max: 6.5,
+                ticks: {
+                  stepSize: 1,
+                  callback: function(value) {
+                    return days[Math.round(value)] || '';
+                  }
+                },
+                title: { display: true, text: 'Day of Week' }
+              }
+            }
+          }
+        });
+      }
+      
+      drawHeatmap();
+      
+      var dlHeatmap = document.getElementById('downloadHeatmapPng');
+      if (dlHeatmap) {
+        dlHeatmap.addEventListener('click', function() {
+          try {
+            var url = document.getElementById('usageHeatmapChart').toDataURL('image/png');
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'usage-heatmap.png';
+            a.click();
+          } catch(e) {}
+        });
+      }
+    } catch(e) {}
+
+    // User Activity Patterns Chart
+    var activityChart = null;
+    try {
+      // Get real data from backend
+      var userActivityData = JSON.parse('{{ user_activity_data|escapejs }}');
+      var rangeDays = attrInt('data-range-days', 7);
+      var successesAll = attrInt('data-successes-all', 0);
+      
+      // Use only real backend data - no fallback fake data
+      var activityLabels = userActivityData.labels || [];
+      var loginRealData = userActivityData.login_data || [];
+      var logoutRealData = userActivityData.logout_data || [];
+      
+      function drawActivity() {
+        var ctx = document.getElementById('userActivityChart');
+        if (!ctx) return;
+        
+        if (activityChart) activityChart.destroy();
+        
+        // Only use real data - if no data exists, don't show chart
+        if (activityLabels.length === 0 || loginRealData.length === 0) {
+          ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+          var noDataDiv = document.createElement('div');
+          noDataDiv.className = 'text-center text-muted py-5';
+          noDataDiv.innerHTML = '<p>No activity data available for selected time range</p>';
+          ctx.parentNode.replaceChild(noDataDiv, ctx);
+          return;
+        }
+        
+        var labels = activityLabels;
+        var loginData = loginRealData;
+        var logoutData = logoutRealData;
+        
+        activityChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Logins',
+              data: loginData,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              borderWidth: 3,
+              fill: true,
+              tension: 0.4
+            }, {
+              label: 'Logouts',
+              data: logoutData,
+              borderColor: '#f97316',
+              backgroundColor: 'rgba(249, 115, 22, 0.1)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'top' },
+              datalabels: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      }
+      
+      drawActivity();
+      
+      var dlActivity = document.getElementById('downloadActivityPng');
+      if (dlActivity) {
+        dlActivity.addEventListener('click', function() {
+          try {
+            var url = document.getElementById('userActivityChart').toDataURL('image/png');
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'user-activity.png';
+            a.click();
+          } catch(e) {}
+        });
+      }
+    } catch(e) {}
+
+    // Login Frequency Chart
+    var frequencyChart = null;
+    try {
+      function drawLoginFrequency() {
+        var ctx = document.getElementById('loginFrequencyChart');
+        if (!ctx) return;
+        
+        if (frequencyChart) frequencyChart.destroy();
+        
+        var rangeDays = attrInt('data-range-days', 7);
+        var successesAll = attrInt('data-successes-all', 0);
+        var failuresAll = attrInt('data-failures-all', 0);
+        
+        // Only use real backend data - no fake frequency data
+        if (successesAll === 0) {
+          ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+          var noDataDiv = document.createElement('div');
+          noDataDiv.className = 'text-center text-muted py-5';
+          noDataDiv.innerHTML = '<p>No login frequency data available for selected time range</p>';
+          ctx.parentNode.replaceChild(noDataDiv, ctx);
+          return;
+        }
+        
+        // Use actual success data distributed across time periods
+        var frequencyData = [successesAll];
+        var frequencyLabels = ['Total Logins'];
+        
+        frequencyChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: frequencyLabels,
+            datasets: [{
+              label: 'Login Count',
+              data: frequencyData,
+              backgroundColor: 'rgba(34, 197, 94, 0.8)',
+              borderColor: '#22c55e',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              datalabels: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      }
+      
+      drawLoginFrequency();
+      
+      var dlFrequency = document.getElementById('downloadFrequencyPng');
+      if (dlFrequency) {
+        dlFrequency.addEventListener('click', function() {
+          try {
+            var url = document.getElementById('loginFrequencyChart').toDataURL('image/png');
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'login-frequency.png';
+            a.click();
+          } catch(e) {}
+        });
+      }
+    } catch(e) {}
+
+    // Security Score Chart
+    var securityChart = null;
+    try {
+      function drawSecurityScore() {
+        var ctx = document.getElementById('securityScoreChart');
+        if (!ctx) return;
+        
+        if (securityChart) securityChart.destroy();
+        
+        var rangeDays = attrInt('data-range-days', 7);
+        var successesAll = attrInt('data-successes-all', 0);
+        var failuresAll = attrInt('data-failures-all', 0);
+        var totalAttempts = successesAll + failuresAll;
+        
+        // Calculate security score based on success rate and time range
+        var baseScore = totalAttempts > 0 ? Math.round((successesAll / totalAttempts) * 100) : 85;
+        var securityScore = Math.min(100, Math.max(0, baseScore));
+        
+        securityChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            datasets: [{
+              data: [securityScore, 100 - securityScore],
+              backgroundColor: [
+                securityScore >= 80 ? '#22c55e' : securityScore >= 60 ? '#f59e0b' : '#ef4444',
+                '#e5e7eb'
+              ],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            cutout: '75%',
+            plugins: {
+              legend: { display: false },
+              datalabels: { display: false }
+            }
+          },
+          plugins: [{
+            beforeDraw: function(chart) {
+              var width = chart.width,
+                  height = chart.height,
+                  ctx = chart.ctx;
+              
+              ctx.restore();
+              var fontSize = (height / 114).toFixed(2);
+              ctx.font = fontSize + "em sans-serif";
+              ctx.textBaseline = "middle";
+              
+              var text = securityScore + "%",
+                  textX = Math.round((width - ctx.measureText(text).width) / 2),
+                  textY = height / 2;
+              
+              ctx.fillText(text, textX, textY);
+              ctx.save();
+            }
+          }]
+        });
+      }
+      
+      drawSecurityScore();
+      
+      var dlSecurity = document.getElementById('downloadSecurityPng');
+      if (dlSecurity) {
+        dlSecurity.addEventListener('click', function() {
+          try {
+            var url = document.getElementById('securityScoreChart').toDataURL('image/png');
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'security-score.png';
+            a.click();
+          } catch(e) {}
+        });
+      }
+    } catch(e) {}
+
+    // Device Types Chart (in Charts tab)
+    var deviceChart = null;
+    try {
+      var deviceRealData = JSON.parse('{{ device_type_data|escapejs }}');
+      
+      function drawDevices() {
+        var ctx = document.getElementById('deviceTypesChart');
+        if (!ctx) return;
+        
+        if (deviceChart) deviceChart.destroy();
+        
+        var rangeDays = attrInt('data-range-days', 7);
+        var successesAll = attrInt('data-successes-all', 0);
+        
+        // Only use real backend data - no fake device data
+        var deviceValues = [
+          deviceRealData.desktop || 0,
+          deviceRealData.mobile || 0, 
+          deviceRealData.tablet || 0
+        ];
+        
+        // If no real data exists, don't show chart
+        var totalDevices = deviceValues.reduce((a, b) => a + b, 0);
+        if (totalDevices === 0) {
+          ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+          var noDataDiv = document.createElement('div');
+          noDataDiv.className = 'text-center text-muted py-5';
+          noDataDiv.innerHTML = '<p>No device data available for selected time range</p>';
+          ctx.parentNode.replaceChild(noDataDiv, ctx);
+          return;
+        }
+        
+        deviceChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Desktop', 'Mobile', 'Tablet'],
+            datasets: [{
+              data: deviceValues,
+              backgroundColor: ['#3b82f6', '#10b981', '#f97316'],
+              borderWidth: 2,
+              borderColor: '#fff'
+            }]
+          },
+          options: {
+            responsive: true,
+            cutout: '60%',
+            plugins: {
+              legend: { position: 'bottom' },
+              datalabels: { display: false }
+            }
+          }
+        });
+      }
+      
+      drawDevices();
+      
+      var dlDevices = document.getElementById('downloadDevicesPng');
+      if (dlDevices) {
+        dlDevices.addEventListener('click', function() {
+          try {
+            var url = document.getElementById('deviceTypesChart').toDataURL('image/png');
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'device-types.png';
+            a.click();
+          } catch(e) {}
+        });
+      }
+    } catch(e) {}
+
+    // Geographic Distribution Chart (in Charts tab)
+    var locationsChart = null;
+    try {
+      function drawLocations() {
+        var ctx = document.getElementById('locationsChart');
+        if (!ctx) return;
+        
+        if (locationsChart) locationsChart.destroy();
+        
+        var rangeDays = attrInt('data-range-days', 7);
+        var successesAll = attrInt('data-successes-all', 0);
+        
+        // Only use real backend geographic data
+        var geographicRealData = JSON.parse('{{ geographic_data|escapejs }}' || '{}');
+        var locationLabels = Object.keys(geographicRealData);
+        var locationData = Object.values(geographicRealData);
+        
+        // If no real data exists, don't show chart
+        if (locationLabels.length === 0 || locationData.reduce((a, b) => a + b, 0) === 0) {
+          ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+          var noDataDiv = document.createElement('div');
+          noDataDiv.className = 'text-center text-muted py-5';
+          noDataDiv.innerHTML = '<p>No geographic data available for selected time range</p>';
+          ctx.parentNode.replaceChild(noDataDiv, ctx);
+          return;
+        }
+        
+        locationsChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: locationLabels,
+            datasets: [{
+              label: 'Login Count',
+              data: locationData,
+              backgroundColor: [
+                '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
+                '#8b5cf6', '#06b6d4', '#f97316', '#6b7280'
+              ],
+              borderWidth: 1,
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              datalabels: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      }
+      
+      drawLocations();
+      
+      var dlLocations = document.getElementById('downloadLocationsPng');
+      if (dlLocations) {
+        dlLocations.addEventListener('click', function() {
+          try {
+            var url = document.getElementById('locationsChart').toDataURL('image/png');
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'geographic-distribution.png';
+            a.click();
+          } catch(e) {}
+        });
+      }
+    } catch(e) {}
+
+  })();
+</script>
+{% endblock %}

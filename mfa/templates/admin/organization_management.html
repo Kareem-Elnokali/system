@@ -1,0 +1,586 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block title %}Organization Management{% endblock %}
+{% block admin_page_name %}Organization Management{% endblock %}
+{% block admin_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Multi-Tenant</span>
+                <h1 class="display-5 mb-2">🏢 Organization Management</h1>
+                <p class="text-white-75 mb-0">Manage multiple organizations, departments, and hierarchical access control.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Organization Overview -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header section-header-on-green d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 text-white">🏛️ Organizations Overview</h5>
+                <button class="btn btn-light btn-sm" onclick="createOrganization()">
+                  <i class="fas fa-plus"></i> Add Organization
+                </button>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="org-metric bg-primary text-white">
+                    <div class="metric-value">{{ total_organizations }}</div>
+                    <div class="metric-label">Total Organizations</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="org-metric bg-success text-white">
+                    <div class="metric-value">{{ active_organizations }}</div>
+                    <div class="metric-label">Active</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="org-metric bg-info text-white">
+                    <div class="metric-value">{{ total_departments }}</div>
+                    <div class="metric-label">Departments</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="org-metric bg-warning text-white">
+                    <div class="metric-value">{{ pending_invites }}</div>
+                    <div class="metric-label">Pending Invites</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">📊 Organization Health</h5>
+              <div class="health-metric">
+                <div class="d-flex justify-content-between">
+                  <span>MFA Compliance</span>
+                  <strong class="text-success">{{ org_mfa_compliance }}%</strong>
+                </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-success" style="width: 92%"></div>
+                </div>
+              </div>
+              
+              <div class="health-metric mt-3">
+                <div class="d-flex justify-content-between">
+                  <span>Security Score</span>
+                  <strong class="text-info">{{ org_security_score }}%</strong>
+                </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-info" style="width: 87%"></div>
+                </div>
+              </div>
+              
+              <div class="health-metric mt-3">
+                <div class="d-flex justify-content-between">
+                  <span>User Adoption</span>
+                  <strong class="text-primary">{{ user_adoption_rate }}%</strong>
+                </div>
+                <div class="progress mt-1" style="height: 6px;">
+                  <div class="progress-bar bg-warning" style="width: 78%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Organizations List -->
+      <div class="card shadow-sm mb-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">🏢 Organizations</h5>
+            <div class="d-flex gap-2">
+              <select class="form-select form-select-sm" id="org-filter">
+                <option value="">All Organizations</option>
+                <option value="active">Active Only</option>
+                <option value="inactive">Inactive Only</option>
+                <option value="trial">Trial Period</option>
+              </select>
+              <button class="btn btn-outline-secondary btn-sm" onclick="exportOrganizations()">
+                <i class="fas fa-download"></i> Export
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="select-all-orgs"></th>
+                  <th>Organization</th>
+                  <th>Users</th>
+                  <th>Departments</th>
+                  <th>MFA Status</th>
+                  <th>Plan</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for org in organizations %}
+                <tr>
+                  <td><input type="checkbox" class="org-select" value="{{ org.id }}"></td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="org-avatar bg-{{ org.color }} text-white">{{ org.name|first|upper }}</div>
+                      <div class="ms-2">
+                        <div class="fw-bold">{{ org.name }}</div>
+                        <small class="text-muted">{{ org.domain }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-primary">{{ org.user_count }}</span>
+                    <small class="text-muted">/ {{ org.user_limit }}</small>
+                  </td>
+                  <td>{{ org.department_count }}</td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span class="badge bg-{{ org.mfa_status_color }} me-1">{{ org.mfa_compliance }}%</span>
+                      <div class="progress" style="width: 60px; height: 4px;">
+                        <div class="progress-bar bg-success" style="width: 85%"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ org.plan_color }}">{{ org.plan_name }}</span>
+                  </td>
+                  <td>{{ org.created_at|date:"M d, Y" }}</td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="viewOrganization(1)" title="View Details">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="btn btn-outline-success" onclick="manageUsers(1)" title="Manage Users">
+                        <i class="fas fa-users"></i>
+                      </button>
+                      <button class="btn btn-outline-info" onclick="organizationSettings(1)" title="Settings">
+                        <i class="fas fa-cog"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" onclick="deleteOrganization(1)" title="Delete">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted">No organizations found</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Department Hierarchy -->
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">🏗️ Department Hierarchy</h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="manageDepartments()">
+                  <i class="fas fa-sitemap"></i> Manage
+                </button>
+              </div>
+              <div class="department-tree mt-3">
+                {% for dept in department_hierarchy %}
+                <div class="dept-node level-{{ dept.level }}">
+                  <div class="dept-info">
+                    <div class="dept-icon">
+                      <i class="fas fa-{{ dept.icon }}"></i>
+                    </div>
+                    <div class="dept-details">
+                      <div class="dept-name">{{ dept.name }}</div>
+                      <div class="dept-stats">
+                        <span class="badge bg-secondary">{{ dept.user_count }} users</span>
+                        <span class="badge bg-info">{{ dept.mfa_enabled_count }} MFA</span>
+                      </div>
+                    </div>
+                  </div>
+                  {% if dept.children %}
+                  <div class="dept-children">
+                    {% for child in dept.children %}
+                    <div class="dept-child">
+                      <i class="fas fa-{{ child.icon }}"></i> {{ child.name }}
+                      <span class="badge bg-light text-dark">{{ child.user_count }}</span>
+                    </div>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">👥 Role-Based Access Control</h5>
+              <div class="role-matrix">
+                <div class="role-header">
+                  <div class="role-title">Permissions Matrix</div>
+                </div>
+                <div class="role-grid">
+                  <div class="role-row header-row">
+                    <div class="role-cell">Permission</div>
+                    <div class="role-cell">Admin</div>
+                    <div class="role-cell">Manager</div>
+                    <div class="role-cell">User</div>
+                  </div>
+                  {% for permission in permission_matrix %}
+                  <div class="role-row">
+                    <div class="role-cell permission-name">{{ permission.name }}</div>
+                    <div class="role-cell">
+                      <i class="fas fa-{{ permission.admin_access|yesno:'check text-success,times text-danger' }}"></i>
+                    </div>
+                    <div class="role-cell">
+                      <i class="fas fa-{{ permission.manager_access|yesno:'check text-success,times text-danger' }}"></i>
+                    </div>
+                    <div class="role-cell">
+                      <i class="fas fa-{{ permission.user_access|yesno:'check text-success,times text-danger' }}"></i>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <button class="btn btn-outline-primary btn-sm" onclick="editPermissions()">
+                  <i class="fas fa-edit"></i> Edit Permissions
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="exportPermissions()">
+                  <i class="fas fa-download"></i> Export Matrix
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bulk Operations -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">⚡ Bulk Operations</h5>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-3">
+              <div class="bulk-action-card" onclick="bulkEnableMFA()">
+                <div class="bulk-icon bg-success">
+                  <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="bulk-content">
+                  <h6>Enable MFA</h6>
+                  <p>Force MFA for selected organizations</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <div class="bulk-action-card" onclick="bulkSendInvites()">
+                <div class="bulk-icon bg-info">
+                  <i class="fas fa-envelope"></i>
+                </div>
+                <div class="bulk-content">
+                  <h6>Send Invites</h6>
+                  <p>Bulk invite users to organizations</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <div class="bulk-action-card" onclick="bulkGenerateReports()">
+                <div class="bulk-icon bg-warning">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="bulk-content">
+                  <h6>Generate Reports</h6>
+                  <p>Create compliance reports for all orgs</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-3">
+              <div class="bulk-action-card" onclick="bulkBackup()">
+                <div class="bulk-icon bg-primary">
+                  <i class="fas fa-database"></i>
+                </div>
+                <div class="bulk-content">
+                  <h6>Backup Data</h6>
+                  <p>Create backups for selected organizations</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.org-metric {
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+.metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+.metric-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+.health-metric {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+.health-metric:last-child {
+  border-bottom: none;
+}
+.org-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+.department-tree {
+  max-height: 400px;
+  overflow-y: auto;
+}
+.dept-node {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+.dept-node.level-1 {
+  margin-left: 1rem;
+  border-left-color: #28a745;
+}
+.dept-node.level-2 {
+  margin-left: 2rem;
+  border-left-color: #ffc107;
+}
+.dept-info {
+  display: flex;
+  align-items: center;
+}
+.dept-icon {
+  width: 32px;
+  height: 32px;
+  background: #007bff;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.75rem;
+}
+.dept-details {
+  flex: 1;
+}
+.dept-name {
+  font-weight: bold;
+  color: #334155;
+  margin-bottom: 0.25rem;
+}
+.dept-stats .badge {
+  margin-right: 0.5rem;
+}
+.dept-children {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e9ecef;
+}
+.dept-child {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 1rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+.dept-child i {
+  margin-right: 0.25rem;
+}
+.role-matrix {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.role-header {
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+.role-title {
+  font-weight: bold;
+  color: #334155;
+}
+.role-grid {
+  display: table;
+  width: 100%;
+}
+.role-row {
+  display: table-row;
+}
+.role-row.header-row {
+  background: #f8f9fa;
+  font-weight: bold;
+}
+.role-cell {
+  display: table-cell;
+  padding: 0.75rem;
+  border-bottom: 1px solid #f1f3f4;
+  text-align: center;
+  vertical-align: middle;
+}
+.role-cell.permission-name {
+  text-align: left;
+  font-weight: 500;
+}
+.bulk-action-card {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  height: 100%;
+}
+.bulk-action-card:hover {
+  background: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.bulk-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 1rem;
+  font-size: 1.2rem;
+}
+.bulk-content h6 {
+  margin-bottom: 0.5rem;
+  color: #334155;
+}
+.bulk-content p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}
+</style>
+
+<script>
+function createOrganization() {
+  alert('Organization creation wizard would open here');
+}
+
+function exportOrganizations() {
+  window.location.href = '{% url "mfa:admin_export_organizations" %}';
+}
+
+function viewOrganization(orgId) {
+  window.location.href = `/mfa/admin/organizations/${orgId}/`;
+}
+
+function manageUsers(orgId) {
+  window.location.href = `/mfa/admin/organizations/${orgId}/users/`;
+}
+
+function organizationSettings(orgId) {
+  window.location.href = `/mfa/admin/organizations/${orgId}/settings/`;
+}
+
+function organizationReports(orgId) {
+  window.location.href = `/mfa/admin/organizations/${orgId}/reports/`;
+}
+
+function manageDepartments() {
+  alert('Department management interface would open here');
+}
+
+function editPermissions() {
+  alert('Permission matrix editor would open here');
+}
+
+function exportPermissions() {
+  window.location.href = '{% url "mfa:admin_export_permissions" %}';
+}
+
+function bulkEnableMFA() {
+  const selected = document.querySelectorAll('.org-select:checked');
+  if (selected.length === 0) {
+    alert('Please select organizations first');
+    return;
+  }
+  if (confirm(`Enable MFA for ${selected.length} organization(s)?`)) {
+    alert('MFA enablement initiated');
+  }
+}
+
+function bulkSendInvites() {
+  alert('Bulk invite wizard would open here');
+}
+
+function bulkGenerateReports() {
+  const selected = document.querySelectorAll('.org-select:checked');
+  if (selected.length === 0) {
+    alert('Please select organizations first');
+    return;
+  }
+  alert(`Generating reports for ${selected.length} organization(s)`);
+}
+
+function bulkBackup() {
+  const selected = document.querySelectorAll('.org-select:checked');
+  if (selected.length === 0) {
+    alert('Please select organizations first');
+    return;
+  }
+  if (confirm(`Create backups for ${selected.length} organization(s)?`)) {
+    alert('Backup process initiated');
+  }
+}
+
+// Select all functionality
+document.getElementById('select-all-orgs').addEventListener('change', function() {
+  const checkboxes = document.querySelectorAll('.org-select');
+  checkboxes.forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

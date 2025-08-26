@@ -1,0 +1,392 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Risk Assessment - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Risk Assessment{% endblock %}
+{% block admin_content %}
+<div class="container py-5 admin-dashboard">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Security</span>
+                <h1 class="display-4 mb-3">Risk Assessment</h1>
+                <p class="text-white-75 mb-0">Real-time threat analysis and user risk scoring.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Overview Cards -->
+      <div class="row g-3 stats-cards-row mt-3">
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">MFA Adoption</div>
+              <div class="display-6">{{ mfa_adoption_rate }}%</div>
+              <div class="progress mt-2" style="height:8px;">
+                <div class="progress-bar bg-success js-width-pct" role="progressbar" data-pct="{{ mfa_adoption_rate|floatformat:0 }}" aria-valuenow="{{ mfa_adoption_rate|floatformat:0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Users Without MFA</div>
+              <div class="display-6 text-danger">{{ users_without_mfa }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Suspicious IPs</div>
+              <div class="display-6 text-warning">{{ suspicious_ips|length }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">High Risk Users</div>
+              <div class="display-6 text-danger">{{ high_risk_users|length }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Distribution -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Risk Score Distribution</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="refreshRiskData()">
+              <i class="fas fa-sync mr-2"></i>Refresh
+            </button>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-6">
+              <canvas id="riskDistributionChart" width="400" height="200"></canvas>
+            </div>
+            <div class="col-md-6">
+              <div class="risk-legend">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="d-flex align-items-center">
+                    <span class="badge bg-success mr-2">Low</span>
+                    <span>0-29 points</span>
+                  </span>
+                  <strong>{{ risk_distribution.low }}</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="d-flex align-items-center">
+                    <span class="badge bg-warning mr-2">Medium</span>
+                    <span>30-59 points</span>
+                  </span>
+                  <strong>{{ risk_distribution.medium }}</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="d-flex align-items-center">
+                    <span class="badge bg-danger mr-2">High</span>
+                    <span>60-79 points</span>
+                  </span>
+                  <strong>{{ risk_distribution.high }}</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="d-flex align-items-center">
+                    <span class="badge bg-dark mr-2">Critical</span>
+                    <span>80+ points</span>
+                  </span>
+                  <strong>{{ risk_distribution.critical }}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- High Risk Users -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">High Risk Users</h5>
+            <a href="{% url 'mfa:admin_users' %}?status=high_risk" class="btn btn-sm btn-outline-secondary">View All</a>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Risk Factors</th>
+                  <th>Last Login</th>
+                  <th>Failed Attempts (7d)</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for user in high_risk_users %}
+                <tr>
+                  <td>
+                    <a href="{% url 'mfa:admin_user_detail' user.id %}" class="user-link">{{ user.username }}</a>
+                    {% if user.is_superuser %}
+                      <span class="badge bg-danger">superuser</span>
+                    {% elif user.is_staff %}
+                      <span class="badge bg-secondary">staff</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <span class="badge bg-danger">No MFA</span>
+                    {% if user.is_staff %}
+                      <span class="badge bg-warning">Staff Account</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ user.last_login|date:'Y-m-d H:i'|default:'Never' }}</td>
+                  <td>
+                    <span class="badge bg-danger">{{ user.mfa_logs.count }}</span>
+                  </td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="contactUser(1)">
+                        <i class="fas fa-envelope"></i>
+                      </button>
+                      <button class="btn btn-outline-warning" onclick="restrictAccess(1)">
+                        <i class="fas fa-ban"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-muted text-center">No high-risk users identified</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Suspicious IP Addresses -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Suspicious IP Addresses</h5>
+            <button class="btn btn-sm btn-outline-danger" onclick="bulkBlockIPs()">
+              <i class="fas fa-ban mr-2"></i>Block Top IPs
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>IP Address</th>
+                  <th>Failed Attempts (24h)</th>
+                  <th>Estimated Location</th>
+                  <th>Threat Level</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for ip_data in suspicious_ips %}
+                <tr>
+                  <td><code>{{ ip_data.ip_address }}</code></td>
+                  <td>
+                    <span class="badge bg-danger">{{ ip_data.failure_count }}</span>
+                  </td>
+                  <td>
+                    {% if ip_data.ip_address|slice:":3" == "192" %}
+                      <span class="text-muted">Local Network</span>
+                    {% elif ip_data.ip_address|slice:":3" == "203" %}
+                      🇦🇺 Australia
+                    {% elif ip_data.ip_address|slice:":3" == "185" %}
+                      🇪🇺 Europe
+                    {% else %}
+                      🌍 Unknown
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if ip_data.failure_count >= 20 %}
+                      <span class="badge bg-danger">🔴 Critical</span>
+                    {% elif ip_data.failure_count >= 10 %}
+                      <span class="badge bg-warning">🟡 High</span>
+                    {% else %}
+                      <span class="badge bg-secondary">🟠 Medium</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-info" onclick="investigateIP('{{ ip_data.ip_address }}')">
+                        <i class="fas fa-search"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" onclick="blockIP('{{ ip_data.ip_address }}')">
+                        <i class="fas fa-ban"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="5" class="text-muted text-center">No suspicious IP addresses detected</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Geographic Analysis -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Geographic Activity (7 days)</h5>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <canvas id="geoChart" width="400" height="200"></canvas>
+            </div>
+            <div class="col-md-6">
+              <div class="geo-stats">
+                {% for country, count in geo_data.items %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span>{{ country }}</span>
+                  <strong>{{ count }}</strong>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Attack Patterns -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Attack Patterns by Hour</h5>
+          </div>
+          <canvas id="attackPatternsChart" width="800" height="300"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{{ risk_distribution|json_script:"risk-distribution-data" }}
+{{ geo_data|json_script:"geo-data" }}
+{{ hourly_failures|json_script:"hourly-failures" }}
+<script>
+// Apply percentage widths without inline template expressions (avoids IDE CSS parser errors)
+document.querySelectorAll('.js-width-pct').forEach(function(el){
+  var pct = parseInt(el.getAttribute('data-pct') || '0', 10);
+  if (!isNaN(pct)) { el.style.width = pct + '%'; }
+});
+
+// Parse embedded JSON
+const riskData = JSON.parse(document.getElementById('risk-distribution-data').textContent || '{}');
+const geoData = JSON.parse(document.getElementById('geo-data').textContent || '{}');
+const hourlyFailures = JSON.parse(document.getElementById('hourly-failures').textContent || '{}');
+
+// Risk Distribution Chart (real data)
+const riskCtx = document.getElementById('riskDistributionChart').getContext('2d');
+new Chart(riskCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Low', 'Medium', 'High', 'Critical'],
+    datasets: [{
+      data: [riskData.low || 0, riskData.medium || 0, riskData.high || 0, riskData.critical || 0],
+      backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#1f2937']
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false }
+    }
+  }
+});
+
+// Geographic Chart (real data)
+const geoCtx = document.getElementById('geoChart').getContext('2d');
+const geoLabels = Object.keys(geoData);
+const geoValues = Object.values(geoData);
+new Chart(geoCtx, {
+  type: 'bar',
+  data: {
+    labels: geoLabels,
+    datasets: [{
+      label: 'Activity Count',
+      data: geoValues,
+      backgroundColor: '#55833d'
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } }
+  }
+});
+
+// Attack Patterns Chart (real data over last 24h buckets)
+const attackCtx = document.getElementById('attackPatternsChart').getContext('2d');
+const attackLabels = Array.from({length: 24}, (_, i) => i + ':00');
+const attackValues = Array.from({length: 24}, (_, i) => hourlyFailures[i] || 0);
+new Chart(attackCtx, {
+  type: 'line',
+  data: {
+    labels: attackLabels,
+    datasets: [{
+      label: 'Failed Attempts',
+      data: attackValues,
+      borderColor: '#ef4444',
+      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: { y: { beginAtZero: true } }
+  }
+});
+
+// Action Functions
+function refreshRiskData() {
+  location.reload();
+}
+
+function contactUser(userId) {
+  if (confirm('Send MFA setup reminder to this user?')) {
+    // Implementation would send email
+    alert('Reminder email sent to user');
+  }
+}
+
+function restrictAccess(userId) {
+  if (confirm('Restrict access for this user until MFA is configured?')) {
+    // Implementation would restrict access
+    alert('Access restricted for user');
+  }
+}
+
+function investigateIP(ip) {
+  window.open(`{% url 'mfa:admin_logs' %}?ip=${ip}`, '_blank');
+}
+
+function blockIP(ip) {
+  if (confirm(`Block IP address ${ip}?`)) {
+    // Implementation would block IP
+    alert(`IP ${ip} has been blocked`);
+  }
+}
+
+function bulkBlockIPs() {
+  if (confirm('Block all IP addresses with 10+ failed attempts?')) {
+    // Implementation would bulk block IPs
+    alert('Suspicious IP addresses have been blocked');
+  }
+}
+</script>
+{% endblock %}

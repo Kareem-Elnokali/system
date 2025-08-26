@@ -1,0 +1,312 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block title %}Security Policies{% endblock %}
+{% block admin_page_name %}Security Policies{% endblock %}
+{% block admin_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Enterprise Security</span>
+                <h1 class="display-5 mb-2">🛡️ Security Policy Engine</h1>
+                <p class="text-white-75 mb-0">Configure automated security policies and compliance rules.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Policies -->
+      <div class="card shadow-sm mb-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header section-header-on-green d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0 text-white">Active Security Policies</h5>
+            <button class="btn btn-light btn-sm" onclick="addNewPolicy()">
+              <i class="fas fa-plus"></i> Add Policy
+            </button>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="policy-card">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="policy-title">🔒 Password Complexity</h6>
+                    <p class="policy-desc">Enforce strong password requirements</p>
+                    <div class="policy-rules">
+                      <span class="badge bg-success">Min 12 chars</span>
+                      <span class="badge bg-success">Special chars required</span>
+                      <span class="badge bg-success">No dictionary words</span>
+                    </div>
+                  </div>
+                  <div class="policy-status">
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="policy-card">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="policy-title">🌍 Geo-blocking</h6>
+                    <p class="policy-desc">Block logins from high-risk countries</p>
+                    <div class="policy-rules">
+                      <span class="badge bg-warning">{{ blocked_countries }} countries blocked</span>
+                      <span class="badge bg-info">VPN detection enabled</span>
+                    </div>
+                  </div>
+                  <div class="policy-status">
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="policy-card">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="policy-title">⏰ Session Management</h6>
+                    <p class="policy-desc">Automatic session timeout and limits</p>
+                    <div class="policy-rules">
+                      <span class="badge bg-info">{{ session_timeout }}min timeout</span>
+                      <span class="badge bg-info">Max {{ max_sessions }} sessions</span>
+                    </div>
+                  </div>
+                  <div class="policy-status">
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="policy-card">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h6 class="policy-title">🚫 Brute Force Protection</h6>
+                    <p class="policy-desc">Automatic account lockout and IP blocking</p>
+                    <div class="policy-rules">
+                      <span class="badge bg-danger">{{ max_attempts }} attempts limit</span>
+                      <span class="badge bg-warning">{{ lockout_duration }}min lockout</span>
+                    </div>
+                  </div>
+                  <div class="policy-status">
+                    <span class="badge bg-success">Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Policy Analytics -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📊 Policy Enforcement Statistics</h5>
+                <select class="form-select form-select-sm" style="width: auto;">
+                  <option>Last 7 days</option>
+                  <option>Last 30 days</option>
+                  <option>Last 90 days</option>
+                </select>
+              </div>
+              <canvas id="policyChart" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">🎯 Policy Effectiveness</h5>
+              <div class="metric-item">
+                <div class="d-flex justify-content-between">
+                  <span>Blocked Attacks</span>
+                  <strong class="text-success">{{ blocked_attacks }}</strong>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-success" style="width: 85%"></div>
+                </div>
+              </div>
+              
+              <div class="metric-item mt-3">
+                <div class="d-flex justify-content-between">
+                  <span>Policy Violations</span>
+                  <strong class="text-warning">{{ policy_violations }}</strong>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-warning" style="width: 65%"></div>
+                </div>
+              </div>
+              
+              <div class="metric-item mt-3">
+                <div class="d-flex justify-content-between">
+                  <span>Compliance Score</span>
+                  <strong class="text-info">{{ compliance_score }}%</strong>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-info" style="width: 88%"></div>
+                </div>
+              </div>
+              
+              <div class="metric-item mt-3">
+                <div class="d-flex justify-content-between">
+                  <span>Auto-remediated</span>
+                  <strong class="text-primary">{{ auto_remediated }}</strong>
+                </div>
+                <div class="progress mt-1" style="height: 4px;">
+                  <div class="progress-bar bg-primary" style="width: 90%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Policy Actions -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📋 Recent Policy Actions</h5>
+            <button class="btn btn-outline-secondary btn-sm" onclick="exportPolicyLogs()">
+              <i class="fas fa-download"></i> Export
+            </button>
+          </div>
+          <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Policy</th>
+                  <th>Action</th>
+                  <th>Target</th>
+                  <th>Result</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for action in recent_actions %}
+                <tr>
+                  <td>{{ action.timestamp|date:"H:i:s" }}</td>
+                  <td>
+                    <span class="badge bg-primary">{{ action.policy_name }}</span>
+                  </td>
+                  <td>{{ action.action_type }}</td>
+                  <td>
+                    <span class="user-link">{{ action.target_user|default:action.target_ip }}</span>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ action.result_color }}">{{ action.result }}</span>
+                  </td>
+                  <td>
+                    <small class="text-muted">{{ action.details|truncatechars:50 }}</small>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted">No recent policy actions</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.policy-card {
+  border: 1px solid #e1e6ea;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #fff;
+  transition: box-shadow 0.2s;
+}
+.policy-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.policy-title {
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+.policy-desc {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+.policy-rules .badge {
+  margin-right: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.metric-item {
+  padding: 0.5rem 0;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Policy enforcement chart
+const ctx = document.getElementById('policyChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    datasets: [{
+      label: 'Blocked Attempts',
+      data: [12, 8, 15, 22, 18, 5, 3],
+      borderColor: '#dc3545',
+      backgroundColor: 'rgba(220, 53, 69, 0.1)',
+      tension: 0.4
+    }, {
+      label: 'Policy Violations',
+      data: [5, 3, 8, 12, 7, 2, 1],
+      borderColor: '#ffc107',
+      backgroundColor: 'rgba(255, 193, 7, 0.1)',
+      tension: 0.4
+    }, {
+      label: 'Auto-remediated',
+      data: [8, 6, 12, 18, 14, 4, 2],
+      borderColor: '#28a745',
+      backgroundColor: 'rgba(40, 167, 69, 0.1)',
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom'
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    }
+  }
+});
+
+function addNewPolicy() {
+  // Implementation for adding new policy
+  alert('Policy creation wizard would open here');
+}
+
+function exportPolicyLogs() {
+  window.location.href = '{% url "mfa:admin_export_policy_logs" %}';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,746 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block title %}Session Management{% endblock %}
+{% block admin_page_name %}Session Management{% endblock %}
+{% block admin_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Advanced Security</span>
+                <h1 class="display-5 mb-2">🔐 Session Management Center</h1>
+                <p class="text-white-75 mb-0">Real-time session monitoring with advanced security controls and anomaly detection.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Overview -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header section-header-on-green d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 text-white">📊 Active Sessions Overview</h5>
+                <div class="d-flex gap-2">
+                  <span class="badge bg-light text-dark">{{ total_active_sessions }} Active</span>
+                  <button class="btn btn-light btn-sm" onclick="refreshSessions()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                  </button>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="session-metric bg-primary text-white">
+                    <div class="metric-icon"><i class="fas fa-users"></i></div>
+                    <div class="metric-value">{{ unique_users_online }}</div>
+                    <div class="metric-label">Users Online</div>
+                    <div class="metric-change">{{ user_growth_percentage }}% vs yesterday</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="session-metric bg-success text-white">
+                    <div class="metric-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="metric-value">{{ secure_sessions }}</div>
+                    <div class="metric-label">Secure Sessions</div>
+                    <div class="metric-change">{{ secure_percentage }}% of total</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="session-metric bg-warning text-white">
+                    <div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="metric-value">{{ suspicious_sessions }}</div>
+                    <div class="metric-label">Suspicious</div>
+                    <div class="metric-change">Flagged by AI</div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="session-metric bg-info text-white">
+                    <div class="metric-icon"><i class="fas fa-clock"></i></div>
+                    <div class="metric-value">{{ avg_session_duration }}</div>
+                    <div class="metric-label">Avg Duration</div>
+                    <div class="metric-change">Minutes</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">🌍 Geographic Distribution</h5>
+              <div class="geo-stats">
+                {% for country in top_countries %}
+                <div class="country-stat">
+                  <div class="country-flag">{{ country.flag }}</div>
+                  <div class="country-info">
+                    <div class="country-name">United States</div>
+                    <div class="country-sessions">45 sessions</div>
+                    <div class="progress mt-1" style="height: 4px;">
+                      <div class="progress-bar bg-primary" style="width: 45%"></div>
+                    </div>
+                  </div>
+                  <div class="country-percentage">45%</div>
+                </div>
+                <div class="country-item">
+                  <div class="country-info">
+                    <div class="country-name">United Kingdom</div>
+                    <div class="country-sessions">23 sessions</div>
+                    <div class="progress mt-1" style="height: 4px;">
+                      <div class="progress-bar bg-primary" style="width: 23%"></div>
+                    </div>
+                  </div>
+                  <div class="country-percentage">23%</div>
+                </div>
+                <div class="country-item">
+                  <div class="country-info">
+                    <div class="country-name">Canada</div>
+                    <div class="country-sessions">12 sessions</div>
+                    <div class="progress mt-1" style="height: 4px;">
+                      <div class="progress-bar bg-primary" style="width: 12%"></div>
+                    </div>
+                  </div>
+                  <div class="country-percentage">12%</div>
+                </div>
+                {% endfor %}
+              </div>
+              
+              <div class="mt-3">
+                <button class="btn btn-outline-primary btn-sm w-100" onclick="viewGeoMap()">
+                  <i class="fas fa-map"></i> View Interactive Map
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Sessions Table -->
+      <div class="card shadow-sm mb-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">👥 Active Sessions</h5>
+            <div class="d-flex gap-2">
+              <select class="form-select form-select-sm" id="session-filter">
+                <option value="">All Sessions</option>
+                <option value="suspicious">Suspicious Only</option>
+                <option value="admin">Admin Sessions</option>
+                <option value="mobile">Mobile Devices</option>
+                <option value="desktop">Desktop</option>
+              </select>
+              <button class="btn btn-outline-danger btn-sm" onclick="terminateSelectedSessions()">
+                <i class="fas fa-ban"></i> Terminate Selected
+              </button>
+              <button class="btn btn-outline-primary btn-sm" onclick="exportSessionData()">
+                <i class="fas fa-download"></i> Export
+              </button>
+            </div>
+          </div>
+          
+          <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="select-all-sessions"></th>
+                  <th>User</th>
+                  <th>Device</th>
+                  <th>Location</th>
+                  <th>Started</th>
+                  <th>Last Activity</th>
+                  <th>Risk Score</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for session in active_sessions %}
+                <tr class="{% if session.is_suspicious %}table-warning{% endif %}">
+                  <td><input type="checkbox" class="session-select" value="{{ session.id }}"></td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="user-avatar me-2">
+                        <i class="fas fa-user-circle fa-lg text-primary"></i>
+                      </div>
+                      <div>
+                        <div class="fw-bold">{{ session.user.username }}</div>
+                        <small class="text-muted">{{ session.user.email }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="device-info">
+                      <div class="device-icon">
+                        <i class="fas fa-{{ session.device_icon }} text-info"></i>
+                      </div>
+                      <div class="device-details">
+                        <div class="device-name">{{ session.device_name }}</div>
+                        <small class="text-muted">{{ session.browser }} {{ session.os }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="location-info">
+                      <div class="location-flag">{{ session.country_flag }}</div>
+                      <div class="location-details">
+                        <div class="location-city">{{ session.city }}</div>
+                        <small class="text-muted">{{ session.ip_address }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div>{{ session.created_at|date:"M d, H:i" }}</div>
+                    <small class="text-muted">{{ session.created_at|timesince }} ago</small>
+                  </td>
+                  <td>
+                    <div>{{ session.last_activity|date:"H:i" }}</div>
+                    <small class="text-muted">{{ session.last_activity|timesince }} ago</small>
+                  </td>
+                  <td>
+                    <div class="risk-score">
+                      <span class="badge bg-{{ session.risk_color }}">{{ session.risk_score }}</span>
+                      {% if session.is_suspicious %}
+                      <i class="fas fa-exclamation-triangle text-warning ms-1" title="Suspicious activity detected"></i>
+                      {% endif %}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-info" onclick="viewSessionDetails('{{ session.id }}')" title="Details">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="btn btn-outline-warning" onclick="flagSession('{{ session.id }}')" title="Flag">
+                        <i class="fas fa-flag"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" onclick="terminateSession('{{ session.id }}')" title="Terminate">
+                        <i class="fas fa-ban"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted">No active sessions found</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Analytics -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">📈 Session Analytics</h5>
+                <div class="d-flex gap-2">
+                  <select class="form-select form-select-sm" id="analytics-period">
+                    <option value="24h">Last 24 Hours</option>
+                    <option value="7d">Last 7 Days</option>
+                    <option value="30d">Last 30 Days</option>
+                  </select>
+                </div>
+              </div>
+              <div class="row mt-3">
+                <div class="col-md-12">
+                  <canvas id="sessionChart" height="300"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">🔍 Anomaly Detection</h5>
+              <div class="anomaly-list">
+                {% for anomaly in recent_anomalies %}
+                <div class="anomaly-item severity-{{ anomaly.severity }}">
+                  <div class="anomaly-icon">
+                    <i class="fas fa-{{ anomaly.icon }}"></i>
+                  </div>
+                  <div class="anomaly-content">
+                    <div class="anomaly-title">{{ anomaly.title }}</div>
+                    <div class="anomaly-description">{{ anomaly.description }}</div>
+                    <div class="anomaly-meta">
+                      <span class="anomaly-time">{{ anomaly.detected_at|timesince }} ago</span>
+                      <span class="badge bg-{{ anomaly.severity_color }}">{{ anomaly.severity|upper }}</span>
+                    </div>
+                  </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-3">
+                  <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                  <p>No anomalies detected</p>
+                </div>
+                {% endfor %}
+              </div>
+              
+              <div class="mt-3">
+                <button class="btn btn-outline-primary btn-sm w-100" onclick="configureAnomalyDetection()">
+                  <i class="fas fa-cog"></i> Configure Detection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Security Controls -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">⚙️ Security Controls</h5>
+            <button class="btn btn-outline-primary btn-sm" onclick="saveSecuritySettings()">
+              <i class="fas fa-save"></i> Save Settings
+            </button>
+          </div>
+          
+          <div class="row mt-3">
+            <div class="col-md-4">
+              <div class="security-control">
+                <div class="control-header">
+                  <div class="control-icon bg-primary">
+                    <i class="fas fa-clock"></i>
+                  </div>
+                  <div class="control-info">
+                    <h6>Session Timeout</h6>
+                    <p class="text-muted mb-0">Automatic session expiration</p>
+                  </div>
+                </div>
+                <div class="control-settings">
+                  <div class="mb-2">
+                    <label class="form-label small">Idle Timeout (minutes)</label>
+                    <input type="number" class="form-control form-control-sm" value="{{ session_idle_timeout }}" min="5" max="1440">
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small">Max Duration (hours)</label>
+                    <input type="number" class="form-control form-control-sm" value="{{ session_max_duration }}" min="1" max="24">
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="remember-me-enabled" {% if remember_me_enabled %}checked{% endif %}>
+                    <label class="form-check-label small" for="remember-me-enabled">
+                      Allow "Remember Me"
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="security-control">
+                <div class="control-header">
+                  <div class="control-icon bg-warning">
+                    <i class="fas fa-shield-alt"></i>
+                  </div>
+                  <div class="control-info">
+                    <h6>Concurrent Sessions</h6>
+                    <p class="text-muted mb-0">Limit simultaneous logins</p>
+                  </div>
+                </div>
+                <div class="control-settings">
+                  <div class="mb-2">
+                    <label class="form-label small">Max Sessions per User</label>
+                    <input type="number" class="form-control form-control-sm" value="{{ max_sessions_per_user }}" min="1" max="10">
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="force-logout-oldest" {% if force_logout_oldest %}checked{% endif %}>
+                    <label class="form-check-label small" for="force-logout-oldest">
+                      Auto-logout oldest session
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="notify-concurrent" {% if notify_concurrent %}checked{% endif %}>
+                    <label class="form-check-label small" for="notify-concurrent">
+                      Notify user of new logins
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="security-control">
+                <div class="control-header">
+                  <div class="control-icon bg-danger">
+                    <i class="fas fa-ban"></i>
+                  </div>
+                  <div class="control-info">
+                    <h6>Suspicious Activity</h6>
+                    <p class="text-muted mb-0">Automated response to threats</p>
+                  </div>
+                </div>
+                <div class="control-settings">
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="auto-terminate-suspicious" {% if auto_terminate_suspicious %}checked{% endif %}>
+                    <label class="form-check-label small" for="auto-terminate-suspicious">
+                      Auto-terminate suspicious sessions
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="require-mfa-suspicious" {% if require_mfa_suspicious %}checked{% endif %}>
+                    <label class="form-check-label small" for="require-mfa-suspicious">
+                      Require MFA for suspicious activity
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="geo-blocking-enabled" {% if geo_blocking_enabled %}checked{% endif %}>
+                    <label class="form-check-label small" for="geo-blocking-enabled">
+                      Enable geo-blocking
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.session-metric {
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+.metric-icon {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-size: 1.5rem;
+  opacity: 0.3;
+}
+.metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+.metric-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin-bottom: 0.25rem;
+}
+.metric-change {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.country-stat {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+.country-stat:last-child {
+  border-bottom: none;
+}
+.country-flag {
+  font-size: 1.5rem;
+  margin-right: 0.75rem;
+}
+.country-info {
+  flex: 1;
+}
+.country-name {
+  font-weight: bold;
+  color: #334155;
+  margin-bottom: 0.25rem;
+}
+.country-sessions {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+.country-percentage {
+  font-weight: bold;
+  color: #64748b;
+}
+.device-info {
+  display: flex;
+  align-items: center;
+}
+.device-icon {
+  margin-right: 0.5rem;
+}
+.device-name {
+  font-weight: 500;
+  color: #334155;
+}
+.location-info {
+  display: flex;
+  align-items: center;
+}
+.location-flag {
+  margin-right: 0.5rem;
+}
+.location-city {
+  font-weight: 500;
+  color: #334155;
+}
+.risk-score {
+  display: flex;
+  align-items: center;
+}
+.anomaly-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 1rem;
+  border-left: 4px solid #e1e6ea;
+  background: #f8f9fa;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 1rem;
+}
+.anomaly-item.severity-high {
+  border-left-color: #dc3545;
+  background: #fff5f5;
+}
+.anomaly-item.severity-medium {
+  border-left-color: #ffc107;
+  background: #fffbf0;
+}
+.anomaly-item.severity-low {
+  border-left-color: #17a2b8;
+  background: #f0f9ff;
+}
+.anomaly-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #dc3545;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+.anomaly-content {
+  flex: 1;
+}
+.anomaly-title {
+  font-weight: bold;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+.anomaly-description {
+  color: #64748b;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+.anomaly-meta {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+.anomaly-meta > * {
+  margin-right: 1rem;
+}
+.security-control {
+  border: 1px solid #e1e6ea;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+  height: 100%;
+}
+.control-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.control-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 0.75rem;
+}
+.control-info h6 {
+  margin-bottom: 0.25rem;
+  color: #334155;
+}
+.control-settings {
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Session analytics chart
+const sessionCtx = document.getElementById('sessionChart').getContext('2d');
+new Chart(sessionCtx, {
+  type: 'line',
+  data: {
+    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+    datasets: [{
+      label: 'Active Sessions',
+      data: [45, 52, 78, 89, 67, 56],
+      borderColor: '#007bff',
+      backgroundColor: 'rgba(0, 123, 255, 0.1)',
+      tension: 0.4
+    }, {
+      label: 'New Sessions',
+      data: [12, 8, 15, 23, 18, 14],
+      borderColor: '#28a745',
+      backgroundColor: 'rgba(40, 167, 69, 0.1)',
+      tension: 0.4
+    }, {
+      label: 'Terminated',
+      data: [8, 12, 6, 9, 15, 11],
+      borderColor: '#dc3545',
+      backgroundColor: 'rgba(220, 53, 69, 0.1)',
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom'
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true
+      }
+    }
+  }
+});
+
+function refreshSessions() {
+  window.location.reload();
+}
+
+function viewGeoMap() {
+  window.location.href = '{% url "mfa:admin_geo_map" %}';
+}
+
+function terminateSelectedSessions() {
+  const selected = Array.from(document.querySelectorAll('.session-select:checked')).map(cb => cb.value);
+  if (selected.length === 0) {
+    alert('Please select sessions to terminate');
+    return;
+  }
+  
+  if (confirm(`Terminate ${selected.length} selected sessions?`)) {
+    fetch('{% url "mfa:admin_terminate_sessions" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({session_ids: selected})
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert(`${data.terminated_count} sessions terminated`);
+          window.location.reload();
+        } else {
+          alert('Failed to terminate sessions: ' + data.error);
+        }
+      });
+  }
+}
+
+function exportSessionData() {
+  window.location.href = '{% url "mfa:admin_export_sessions" %}';
+}
+
+function viewSessionDetails(sessionId) {
+  window.location.href = `/mfa/admin/sessions/${sessionId}/`;
+}
+
+function flagSession(sessionId) {
+  fetch(`/mfa/admin/sessions/${sessionId}/flag/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Session flagged for review');
+        window.location.reload();
+      } else {
+        alert('Failed to flag session: ' + data.error);
+      }
+    });
+}
+
+function terminateSession(sessionId) {
+  if (confirm('Terminate this session?')) {
+    fetch(`/mfa/admin/sessions/${sessionId}/terminate/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Session terminated');
+          window.location.reload();
+        } else {
+          alert('Failed to terminate session: ' + data.error);
+        }
+      });
+  }
+}
+
+function configureAnomalyDetection() {
+  alert('Anomaly detection configuration would open here');
+}
+
+function saveSecuritySettings() {
+  const settings = {
+    session_idle_timeout: document.querySelector('input[type="number"]').value,
+    session_max_duration: document.querySelectorAll('input[type="number"]')[1].value,
+    max_sessions_per_user: document.querySelectorAll('input[type="number"]')[2].value,
+    remember_me_enabled: document.getElementById('remember-me-enabled').checked,
+    force_logout_oldest: document.getElementById('force-logout-oldest').checked,
+    notify_concurrent: document.getElementById('notify-concurrent').checked,
+    auto_terminate_suspicious: document.getElementById('auto-terminate-suspicious').checked,
+    require_mfa_suspicious: document.getElementById('require-mfa-suspicious').checked,
+    geo_blocking_enabled: document.getElementById('geo-blocking-enabled').checked
+  };
+  
+  fetch('{% url "mfa:admin_save_security_settings" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    },
+    body: JSON.stringify(settings)
+  }).then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Security settings saved successfully');
+      } else {
+        alert('Failed to save settings: ' + data.error);
+      }
+    });
+}
+
+// Select all functionality
+document.getElementById('select-all-sessions').addEventListener('change', function() {
+  const checkboxes = document.querySelectorAll('.session-select');
+  checkboxes.forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,613 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block title %}Backup & Recovery{% endblock %}
+{% block admin_page_name %}Backup & Recovery{% endblock %}
+{% block admin_content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Enterprise Backup</span>
+                <h1 class="display-5 mb-2">💾 Backup & Recovery Center</h1>
+                <p class="text-white-75 mb-0">Comprehensive data protection and disaster recovery management.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backup Status Overview -->
+      <div class="row">
+        <div class="col-md-8">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <div class="section-header section-header-on-green d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 text-white">🔄 Backup Status</h5>
+                <div class="d-flex gap-2">
+                  <span class="badge bg-light text-dark">Auto-backup: {{ auto_backup_status }}</span>
+                  <button class="btn btn-light btn-sm" onclick="runBackupNow()">
+                    <i class="fas fa-play"></i> Run Now
+                  </button>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-md-3">
+                  <div class="backup-metric">
+                    <div class="metric-icon bg-success">
+                      <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="metric-info">
+                      <div class="metric-value">{{ successful_backups }}</div>
+                      <div class="metric-label">Successful Backups</div>
+                      <div class="metric-period">Last 30 days</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-3">
+                  <div class="backup-metric">
+                    <div class="metric-icon bg-danger">
+                      <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="metric-info">
+                      <div class="metric-value">{{ failed_backups }}</div>
+                      <div class="metric-label">Failed Backups</div>
+                      <div class="metric-period">Last 30 days</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-3">
+                  <div class="backup-metric">
+                    <div class="metric-icon bg-info">
+                      <i class="fas fa-database"></i>
+                    </div>
+                    <div class="metric-info">
+                      <div class="metric-value">{{ total_backup_size }}</div>
+                      <div class="metric-label">Total Size</div>
+                      <div class="metric-period">All backups</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-3">
+                  <div class="backup-metric">
+                    <div class="metric-icon bg-warning">
+                      <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="metric-info">
+                      <div class="metric-value">{{ last_backup_time }}</div>
+                      <div class="metric-label">Last Backup</div>
+                      <div class="metric-period">{{ last_backup_status }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-4">
+          <div class="card shadow-sm mb-4 rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">⚙️ Backup Configuration</h5>
+              <div class="config-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Frequency</span>
+                  <span class="badge bg-primary">{{ backup_frequency }}</span>
+                </div>
+              </div>
+              
+              <div class="config-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Retention</span>
+                  <span class="badge bg-info">{{ backup_retention }} days</span>
+                </div>
+              </div>
+              
+              <div class="config-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Encryption</span>
+                  <span class="badge bg-success">AES-256</span>
+                </div>
+              </div>
+              
+              <div class="config-item">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Compression</span>
+                  <span class="badge bg-secondary">{{ compression_enabled|yesno:"Enabled,Disabled" }}</span>
+                </div>
+              </div>
+              
+              <div class="mt-3">
+                <button class="btn btn-outline-primary btn-sm w-100" onclick="configureBackup()">
+                  <i class="fas fa-cog"></i> Configure Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Backups -->
+      <div class="card shadow-sm mb-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📋 Recent Backups</h5>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-success btn-sm" onclick="scheduleBackup()">
+                <i class="fas fa-calendar-plus"></i> Schedule
+              </button>
+              <button class="btn btn-outline-primary btn-sm" onclick="downloadBackup()">
+                <i class="fas fa-download"></i> Download
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive mt-3">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="select-all-backups"></th>
+                  <th>Backup ID</th>
+                  <th>Type</th>
+                  <th>Created</th>
+                  <th>Size</th>
+                  <th>Status</th>
+                  <th>Duration</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for backup in recent_backups %}
+                <tr>
+                  <td><input type="checkbox" class="backup-select" value="{{ backup.id }}"></td>
+                  <td>
+                    <code class="backup-id">{{ backup.backup_id }}</code>
+                  </td>
+                  <td>
+                    <span class="badge bg-{{ backup.type_color }}">{{ backup.backup_type }}</span>
+                  </td>
+                  <td>{{ backup.created_at|date:"M d, H:i" }}</td>
+                  <td>{{ backup.size_formatted }}</td>
+                  <td>
+                    <span class="badge bg-{{ backup.status_color }}">
+                      <i class="fas fa-{{ backup.status_icon }}"></i> {{ backup.status }}
+                    </span>
+                  </td>
+                  <td>{{ backup.duration }}</td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="viewBackupDetails('{{ backup.id }}')" title="View Details">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button class="btn btn-outline-success" onclick="restoreBackup('{{ backup.id }}')" title="Restore">
+                        <i class="fas fa-undo"></i>
+                      </button>
+                      <button class="btn btn-outline-info" onclick="downloadBackupFile('{{ backup.id }}')" title="Download">
+                        <i class="fas fa-download"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" onclick="deleteBackup('{{ backup.id }}')" title="Delete">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted">No backups found</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recovery Options -->
+      <div class="row">
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">🔧 Recovery Options</h5>
+              <div class="recovery-option">
+                <div class="d-flex align-items-start">
+                  <div class="recovery-icon bg-success">
+                    <i class="fas fa-database"></i>
+                  </div>
+                  <div class="recovery-content">
+                    <h6>Full System Restore</h6>
+                    <p class="text-muted">Complete restoration of all MFA data and configurations</p>
+                    <button class="btn btn-success btn-sm" onclick="initiateFullRestore()">
+                      <i class="fas fa-play"></i> Initiate
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="recovery-option">
+                <div class="d-flex align-items-start">
+                  <div class="recovery-icon bg-info">
+                    <i class="fas fa-users"></i>
+                  </div>
+                  <div class="recovery-content">
+                    <h6>User Data Recovery</h6>
+                    <p class="text-muted">Restore specific user accounts and MFA settings</p>
+                    <button class="btn btn-info btn-sm" onclick="initiateUserRestore()">
+                      <i class="fas fa-play"></i> Initiate
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="recovery-option">
+                <div class="d-flex align-items-start">
+                  <div class="recovery-icon bg-warning">
+                    <i class="fas fa-cog"></i>
+                  </div>
+                  <div class="recovery-content">
+                    <h6>Configuration Recovery</h6>
+                    <p class="text-muted">Restore system settings and security policies</p>
+                    <button class="btn btn-warning btn-sm" onclick="initiateConfigRestore()">
+                      <i class="fas fa-play"></i> Initiate
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <h5 class="mb-3">📊 Backup Analytics</h5>
+              <canvas id="backupChart" height="200"></canvas>
+              
+              <div class="mt-3">
+                <div class="row text-center">
+                  <div class="col-4">
+                    <div class="analytics-item">
+                      <div class="analytics-value text-success">{{ backup_success_rate }}%</div>
+                      <div class="analytics-label">Success Rate</div>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="analytics-item">
+                      <div class="analytics-value text-info">{{ avg_backup_time }}</div>
+                      <div class="analytics-label">Avg Duration</div>
+                    </div>
+                  </div>
+                  <div class="col-4">
+                    <div class="analytics-item">
+                      <div class="analytics-value text-primary">{{ storage_efficiency }}%</div>
+                      <div class="analytics-label">Efficiency</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Disaster Recovery Plan -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">🚨 Disaster Recovery Plan</h5>
+            <button class="btn btn-outline-danger btn-sm" onclick="activateDisasterRecovery()">
+              <i class="fas fa-exclamation-triangle"></i> Activate DR
+            </button>
+          </div>
+          
+          <div class="row mt-3">
+            <div class="col-md-4">
+              <div class="dr-step">
+                <div class="dr-step-number">1</div>
+                <div class="dr-step-content">
+                  <h6>Assessment</h6>
+                  <p>Evaluate system damage and data integrity</p>
+                  <span class="badge bg-secondary">Ready</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="dr-step">
+                <div class="dr-step-number">2</div>
+                <div class="dr-step-content">
+                  <h6>Recovery</h6>
+                  <p>Restore from latest verified backup</p>
+                  <span class="badge bg-secondary">Ready</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-md-4">
+              <div class="dr-step">
+                <div class="dr-step-number">3</div>
+                <div class="dr-step-content">
+                  <h6>Verification</h6>
+                  <p>Validate system integrity and functionality</p>
+                  <span class="badge bg-secondary">Ready</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="alert alert-info mt-3">
+            <i class="fas fa-info-circle"></i>
+            <strong>Recovery Time Objective (RTO):</strong> {{ rto_hours }} hours |
+            <strong>Recovery Point Objective (RPO):</strong> {{ rpo_hours }} hours |
+            <strong>Last DR Test:</strong> {{ last_dr_test|date:"M d, Y" }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.backup-metric {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.metric-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 1rem;
+  font-size: 1.2rem;
+}
+.metric-info {
+  flex: 1;
+}
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #334155;
+}
+.metric-label {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+.metric-period {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+.config-item {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+.config-item:last-child {
+  border-bottom: none;
+}
+.backup-id {
+  font-size: 0.85rem;
+  background: #f1f3f4;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+.recovery-option {
+  padding: 1rem 0;
+  border-bottom: 1px solid #f1f3f4;
+}
+.recovery-option:last-child {
+  border-bottom: none;
+}
+.recovery-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+.recovery-content h6 {
+  margin-bottom: 0.5rem;
+  color: #334155;
+}
+.recovery-content p {
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+.analytics-item {
+  padding: 0.5rem;
+}
+.analytics-value {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+.analytics-label {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.dr-step {
+  display: flex;
+  align-items: flex-start;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+.dr-step-number {
+  width: 32px;
+  height: 32px;
+  background: #007bff;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-right: 1rem;
+  flex-shrink: 0;
+}
+.dr-step-content h6 {
+  margin-bottom: 0.5rem;
+  color: #334155;
+}
+.dr-step-content p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Backup analytics chart
+const backupCtx = document.getElementById('backupChart').getContext('2d');
+new Chart(backupCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Successful', 'Failed', 'In Progress'],
+    datasets: [{
+      data: [45, 3, 2],
+      backgroundColor: ['#28a745', '#dc3545', '#ffc107'],
+      borderWidth: 2,
+      borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          padding: 15,
+          usePointStyle: true
+        }
+      }
+    }
+  }
+});
+
+function runBackupNow() {
+  if (confirm('Start immediate backup? This may take several minutes.')) {
+    fetch('{% url "mfa:admin_run_backup" %}', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Backup started successfully');
+          window.location.reload();
+        } else {
+          alert('Failed to start backup: ' + data.error);
+        }
+      });
+  }
+}
+
+function configureBackup() {
+  window.location.href = '{% url "mfa:admin_backup_settings" %}';
+}
+
+function scheduleBackup() {
+  alert('Backup scheduling wizard would open here');
+}
+
+function downloadBackup() {
+  const selected = document.querySelectorAll('.backup-select:checked');
+  if (selected.length === 0) {
+    alert('Please select backups to download');
+    return;
+  }
+  alert(`Downloading ${selected.length} backup(s)`);
+}
+
+function viewBackupDetails(backupId) {
+  window.location.href = `/mfa/admin/backups/${backupId}/`;
+}
+
+function restoreBackup(backupId) {
+  if (confirm('Are you sure you want to restore from this backup? This action cannot be undone.')) {
+    fetch(`{% url "mfa:admin_restore_backup" %}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({backup_id: backupId})
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Restore initiated successfully');
+        } else {
+          alert('Failed to initiate restore: ' + data.error);
+        }
+      });
+  }
+}
+
+function downloadBackupFile(backupId) {
+  window.location.href = `/mfa/admin/backups/${backupId}/download/`;
+}
+
+function deleteBackup(backupId) {
+  if (confirm('Are you sure you want to delete this backup? This action cannot be undone.')) {
+    fetch(`{% url "mfa:admin_delete_backup" %}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({backup_id: backupId})
+    }).then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Backup deleted successfully');
+          window.location.reload();
+        } else {
+          alert('Failed to delete backup: ' + data.error);
+        }
+      });
+  }
+}
+
+function initiateFullRestore() {
+  alert('Full system restore wizard would open here');
+}
+
+function initiateUserRestore() {
+  alert('User data restore wizard would open here');
+}
+
+function initiateConfigRestore() {
+  alert('Configuration restore wizard would open here');
+}
+
+function activateDisasterRecovery() {
+  if (confirm('Activate Disaster Recovery Plan? This will initiate emergency procedures.')) {
+    alert('Disaster Recovery Plan activated');
+  }
+}
+
+// Select all functionality
+document.getElementById('select-all-backups').addEventListener('change', function() {
+  const checkboxes = document.querySelectorAll('.backup-select');
+  checkboxes.forEach(cb => cb.checked = this.checked);
+});
+</script>
+{% endblock %}

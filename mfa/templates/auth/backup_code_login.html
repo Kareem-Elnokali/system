@@ -1,0 +1,101 @@
+{% extends 'mfa/base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+{% block title %}Login with Backup Code - {{ site_name }}{% endblock %}
+{% block content %}
+    {% include 'partials/navbar.html' %}
+    <style>
+      .has-invalid { position: relative; }
+      .has-invalid .invalid-icon {
+        position: absolute;
+        right: 12px;
+        top: 38px;
+        color: #dc3545;
+        z-index: 2;
+        pointer-events: none;
+        font-size: 0.95rem;
+      }
+</style>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-7 col-lg-5">
+                <div class="card border shadow-lg p-4">
+                    <div class="text-right mb-1">
+                        <button type="button" class="btn btn-link p-0" data-toggle="modal" data-target="#genericSecurityNotesModal" title="Security notes" aria-label="Open security notes">
+                            <i class="fa fa-info-circle info-icon brand" aria-hidden="true" style="font-size: 1rem;"></i>
+                        </button>
+                    </div>
+                    <h2 class="h2Title text-center mb-2" style="font-size: calc(1.9rem + 0.5vw) !important;"><span class="brand-color">U</span>se a Backup Code</h2>
+                    <p class="text-center text-muted mb-3">Enter your username and a backup code to log in.</p>
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} py-2 small" role="alert">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3 has-invalid">
+                            <label for="{{ form.username.id_for_label }}" class="form-label">Username or Email</label>
+                            <div class="input-group">
+                              <div class="input-group-prepend">
+                                <span class="input-group-text" id="bup-username-addon" aria-hidden="true"><i class="fa fa-user"></i></span>
+                              </div>
+                              {% if form.username.errors %}
+                                {{ form.username|add_class:"form-control is-invalid"|attr:"aria-describedby:bup-username-addon" }}
+                              {% else %}
+                                {{ form.username|add_class:"form-control"|attr:"aria-describedby:bup-username-addon" }}
+                              {% endif %}
+                            </div>
+                            {% if form.username.errors %}
+                              <i class="fas fa-exclamation-circle invalid-icon" aria-hidden="true"></i>
+                              <div class="text-danger small mt-1">{{ form.username.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="mb-3 has-invalid">
+                            <label for="{{ form.code.id_for_label }}" class="form-label">Backup Code</label>
+                            <div class="input-group">
+                              <div class="input-group-prepend">
+                                <span class="input-group-text" id="bup-code-addon" aria-hidden="true"><i class="fa fa-key"></i></span>
+                              </div>
+                              {% if form.code.errors %}
+                                {{ form.code|add_class:"form-control is-invalid"|attr:"aria-describedby:bup-code-addon" }}
+                              {% else %}
+                                {{ form.code|add_class:"form-control"|attr:"aria-describedby:bup-code-addon" }}
+                              {% endif %}
+                            </div>
+                            {% if form.code.errors %}
+                              <i class="fas fa-exclamation-circle invalid-icon" aria-hidden="true"></i>
+                              <div class="text-danger small mt-1">{{ form.code.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="submitButton w-100">Login with Backup Code</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="genericSecurityNotesModal" tabindex="-1" role="dialog" aria-labelledby="genericSecurityNotesLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title font-weight-bold" id="genericSecurityNotesLabel"><span class="brand-color">S</span>ecurity notes</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body text-left">
+            <ul class="mb-0 pl-3" style="list-style: disc;">
+              <li class="mb-1"><strong>Your Security Key</strong> is a short phrase we show here and in some emails. It should match.</li>
+              <li class="mb-1"><strong>Keep codes private.</strong> Only enter codes on this website. We will never ask for your code or your Security Key by email, phone, or chat.</li>
+              <li class="mb-1"><strong>Verify the domain.</strong> Before entering a code, ensure the address bar shows our official domain.</li>
+              <li class="mb-1"><strong>Need help?</strong> Pause and contact support using the Contact page on our website.</li>
+            </ul>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-brand" data-dismiss="modal">Got it</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% include 'partials/footer.html' %}
+{% endblock %}

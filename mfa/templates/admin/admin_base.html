@@ -1,0 +1,340 @@
+{% extends 'mfa/base.html' %}
+{% load static %}
+{% load role_tags %}
+{% block title %}{% block admin_title %}Admin{% endblock %}{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'mfa/css/admin.css' %}">
+{% endblock %}
+{% block content %}
+  <div class="admin-layout d-flex">
+    <aside id="adminSidebar" class="admin-sidebar collapse d-md-flex flex-column">
+      <div class="brand px-3 py-3 d-flex align-items-center position-relative">
+        <i class="fas fa-shield-alt mr-2"></i>
+        <span class="brand-name">Security Center</span>
+        <!-- Mobile/Tablet close button (inline, aligned with title) -->
+        <button class="btn btn-sm btn-outline-light sidebar-close d-lg-none"
+                type="button" data-toggle="collapse" data-target="#adminSidebar" aria-controls="adminSidebar" aria-expanded="true" aria-label="Close sidebar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <nav class="sidebar-nav flex-1 px-2">
+        {% with cur=request.resolver_match.url_name %}
+          <a href="{% url 'mfa:admin_dashboard' %}" class="nav-item {% if cur == 'admin_dashboard' %}active{% endif %}" {% if cur == 'admin_dashboard' %}aria-current="page"{% endif %}>
+            <i class="fas fa-chart-line"></i><span>Dashboard</span>
+          </a>
+          <a href="{% url 'mfa:admin_statistics' %}" class="nav-item {% if cur == 'admin_statistics' %}active{% endif %}" {% if cur == 'admin_statistics' %}aria-current="page"{% endif %}>
+            <i class="fas fa-chart-pie"></i><span>Statistics</span>
+          </a>
+          <a href="{% url 'mfa:admin_users' %}" class="nav-item {% if cur == 'admin_users' %}active{% endif %}" {% if cur == 'admin_users' %}aria-current="page"{% endif %}>
+            <i class="fas fa-users"></i><span>Users</span>
+          </a>
+          <a href="{% url 'mfa:admin_roles_management' %}" class="nav-item {% if cur == 'admin_roles_management' %}active{% endif %}" {% if cur == 'admin_roles_management' %}aria-current="page"{% endif %}>
+            <i class="fas fa-user-shield"></i><span>Roles</span>
+          </a>
+          <a href="{% url 'mfa:admin_settings' %}" class="nav-item {% if cur == 'admin_settings' %}active{% endif %}" {% if cur == 'admin_settings' %}aria-current="page"{% endif %}>
+            <i class="fas fa-sliders-h"></i><span>Settings</span>
+          </a>
+          <a href="{% url 'mfa:admin_logs' %}" class="nav-item {% if cur == 'admin_logs' %}active{% endif %}" {% if cur == 'admin_logs' %}aria-current="page"{% endif %}>
+            <i class="fas fa-list"></i><span>Logs</span>
+          </a>
+          <a href="{% url 'mfa:admin_realtime_monitoring' %}" class="nav-item {% if cur == 'admin_realtime_monitoring' %}active{% endif %}" {% if cur == 'admin_realtime_monitoring' %}aria-current="page"{% endif %}>
+            <i class="fas fa-broadcast-tower"></i><span>Live Monitor</span>
+            <span class="nav-badge pulse-dot"></span>
+          </a>
+          <a href="{% url 'mfa:admin_report_settings' %}" class="nav-item {% if cur == 'admin_report_settings' %}active{% endif %}" {% if cur == 'admin_report_settings' %}aria-current="page"{% endif %}>
+            <i class="fas fa-envelope-open-text"></i><span>Reports</span>
+          </a>
+          <div class="nav-divider"></div>
+          <div class="nav-section-label">Advanced Analytics</div>
+          {% if request.user|has_any_group:"Security Admin,Analyst,Support" %}
+          <a href="{% url 'mfa:admin_risk_assessment' %}" class="nav-item {% if cur == 'admin_risk_assessment' %}active{% endif %}" {% if cur == 'admin_risk_assessment' %}aria-current="page"{% endif %}>
+            <i class="fas fa-shield-alt"></i><span>Risk Assessment</span>
+          </a>
+          {% endif %}
+          {# Compliance consolidated into Enterprise Reporting; link removed #}
+          <div class="nav-divider"></div>
+          <div class="nav-section-label">Enterprise Security</div>
+          {% if request.user|has_any_group:"Security Admin,Analyst,Support" %}
+          <a href="{% url 'mfa:admin_session_management' %}" class="nav-item {% if cur == 'admin_session_management' %}active{% endif %}" {% if cur == 'admin_session_management' %}aria-current="page"{% endif %}>
+            <i class="fas fa-users-cog"></i><span>Session Management</span>
+          </a>
+          {% endif %}
+          {% if request.user|has_any_group:"Security Admin,Analyst" %}
+          <a href="{% url 'mfa:admin_geolocation_tracking' %}" class="nav-item {% if cur == 'admin_geolocation_tracking' %}active{% endif %}" {% if cur == 'admin_geolocation_tracking' %}aria-current="page"{% endif %}>
+            <i class="fas fa-globe-americas"></i><span>Geolocation Tracking</span>
+          </a>
+          <a href="{% url 'mfa:admin_threat_intelligence' %}" class="nav-item {% if cur == 'admin_threat_intelligence' %}active{% endif %}" {% if cur == 'admin_threat_intelligence' %}aria-current="page"{% endif %}>
+            <i class="fas fa-shield-virus"></i><span>Threat Intelligence</span>
+          </a>
+          <a href="{% url 'mfa:admin_user_behavior_analytics' %}" class="nav-item {% if cur == 'admin_user_behavior_analytics' %}active{% endif %}" {% if cur == 'admin_user_behavior_analytics' %}aria-current="page"{% endif %}>
+            <i class="fas fa-user-chart"></i><span>User Behavior</span>
+          </a>
+          {% endif %}
+          {% if request.user|has_any_group:"Security Admin" %}
+          <a href="{% url 'mfa:admin_api_management' %}" class="nav-item {% if cur == 'admin_api_management' %}active{% endif %}" {% if cur == 'admin_api_management' %}aria-current="page"{% endif %}>
+            <i class="fas fa-code"></i><span>API Management</span>
+          </a>
+          {% endif %}
+          <div class="nav-divider"></div>
+          <div class="nav-section-label">Advanced Features</div>
+          {% if request.user|has_any_group:"Security Admin,Analyst" %}
+          <a href="{% url 'mfa:admin_device_fingerprinting' %}" class="nav-item {% if cur == 'admin_device_fingerprinting' %}active{% endif %}" {% if cur == 'admin_device_fingerprinting' %}aria-current="page"{% endif %}>
+            <i class="fas fa-fingerprint"></i><span>Device Fingerprinting</span>
+          </a>
+          {% endif %}
+          {% if request.user|has_any_group:"Security Admin,Support,Analyst" %}
+          <a href="{% url 'mfa:admin_notification_center' %}" class="nav-item {% if cur == 'admin_notification_center' %}active{% endif %}" {% if cur == 'admin_notification_center' %}aria-current="page"{% endif %}>
+            <i class="fas fa-bell"></i><span>Notification Center</span>
+            {% if unread_notifications_count %}<span class="nav-badge">{{ unread_notifications_count }}</span>{% endif %}
+          </a>
+          {% endif %}
+          {% if request.user|has_any_group:"Security Admin,Analyst" %}
+          <a href="{% url 'mfa:admin_incident_response' %}" class="nav-item {% if cur == 'admin_incident_response' %}active{% endif %}" {% if cur == 'admin_incident_response' %}aria-current="page"{% endif %}>
+            <i class="fas fa-exclamation-triangle"></i><span>Incident Response</span>
+          </a>
+          {# ML Risk Engine consolidated under Predictive Analytics; link removed #}
+          {% endif %}
+          {% if request.user|has_any_group:"Security Admin,Compliance" %}
+          <a href="{% url 'mfa:admin_forensics_audit' %}" class="nav-item {% if cur == 'admin_forensics_audit' %}active{% endif %}" {% if cur == 'admin_forensics_audit' %}aria-current="page"{% endif %}>
+            <i class="fas fa-search"></i><span>Forensics & Audit</span>
+          </a>
+          {% endif %}
+        {% endwith %}
+      </nav>
+      <div class="sidebar-footer px-3 py-2 small text-muted">
+        <span>&copy; {{ site_name|default:'Site' }}</span>
+      </div>
+    </aside>
+    <!-- Backdrop for mobile/tablet sidebar -->
+    <div class="admin-backdrop d-lg-none" data-toggle="collapse" data-target="#adminSidebar" aria-controls="adminSidebar" aria-label="Close sidebar"></div>
+    <main class="admin-main flex-1 d-flex flex-column">
+      <header class="admin-topbar px-3">
+        <div class="left d-flex align-items-center" style="gap:.5rem;">
+          <button class="topbar-hamburger d-lg-none d-inline-flex align-items-center justify-content-center" type="button" data-toggle="collapse" data-target="#adminSidebar" aria-controls="adminSidebar" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="fas fa-bars"></i>
+          </button>
+          {# Back-to-Dashboard button removed as requested #}
+          <nav aria-label="breadcrumb" class="mb-0 d-none d-lg-block">
+            {% block admin_breadcrumb %}
+              <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="{% url 'mfa:admin_dashboard' %}">Admin</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{% block admin_page_name %}{% endblock %}</li>
+              </ol>
+            {% endblock %}
+          </nav>
+        </div>
+        <div class="right">
+          <div class="actions-outer">
+            <div class="right-scroll">
+          {% block admin_actions %}
+            {% url 'mfa:admin_dashboard' as dash_url %}
+            {% url 'mfa:admin_statistics' as stats_url %}
+            {% url 'mfa:admin_settings' as settings_url %}
+            {% url 'mfa:admin_users' as users_url %}
+            {% url 'mfa:admin_roles_management' as roles_url %}
+            {% url 'mfa:admin_logs' as logs_url %}
+            {% url 'mfa:admin_realtime_monitoring' as monitoring_url %}
+            {% url 'mfa:admin_report_settings' as reports_url %}
+            {% with cur=request.resolver_match.url_name %}
+              <a href="{{ dash_url }}" class="btn btn-sm {% if cur == 'admin_dashboard' %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}" {% if cur == 'admin_dashboard' %}aria-current="page"{% endif %}>
+                <i class="fas fa-chart-line mr-2"></i> <span class="d-none d-xl-inline">Dashboard</span>
+              </a>
+              <a href="{{ stats_url }}" class="btn btn-sm {% if cur == 'admin_statistics' %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}" {% if cur == 'admin_statistics' %}aria-current="page"{% endif %}>
+                <i class="fas fa-chart-pie mr-2"></i> <span class="d-none d-xl-inline">Statistics</span>
+              </a>
+              <a href="{{ monitoring_url }}" class="btn btn-sm {% if cur == 'admin_realtime_monitoring' %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}" {% if cur == 'admin_realtime_monitoring' %}aria-current="page"{% endif %}>
+                <i class="fas fa-broadcast-tower mr-2"></i> <span class="d-none d-xl-inline">Live Monitor</span>
+              </a>
+              <a href="{{ settings_url }}" class="btn btn-sm {% if cur == 'admin_settings' %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}" {% if cur == 'admin_settings' %}aria-current="page"{% endif %}>
+                <i class="fas fa-sliders-h mr-2"></i> <span class="d-none d-xl-inline">Settings</span>
+              </a>
+              <a href="{{ users_url }}" class="btn btn-sm {% if cur == 'admin_users' %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}" {% if cur == 'admin_users' %}aria-current="page"{% endif %}>
+                <i class="fas fa-users mr-2"></i> <span class="d-none d-xl-inline">Users</span>
+              </a>
+              <a href="{{ roles_url }}" class="btn btn-sm {% if cur == 'admin_roles_management' %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}" {% if cur == 'admin_roles_management' %}aria-current="page"{% endif %}>
+                <i class="fas fa-user-shield mr-2"></i> <span class="d-none d-xl-inline">Roles</span>
+              </a>
+              <a href="{{ logs_url }}" class="btn btn-sm {% if cur == 'admin_logs' %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}" {% if cur == 'admin_logs' %}aria-current="page"{% endif %}>
+                <i class="fas fa-list mr-2"></i> <span class="d-none d-xl-inline">Logs</span>
+              </a>
+              <a href="{{ reports_url }}" class="btn btn-sm {% if cur == 'admin_report_settings' %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}" {% if cur == 'admin_report_settings' %}aria-current="page"{% endif %}>
+                <i class="fas fa-envelope-open-text mr-2"></i> <span class="d-none d-xl-inline">Reports</span>
+              </a>
+            {% endwith %}
+          {% endblock %}
+            </div>
+          </div>
+        </div>
+      </header>
+      <section class="admin-content container-fluid py-4">
+        {% block admin_content %}{% endblock %}
+      </section>
+    </main>
+  </div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+  (function(){
+    function enableDragScroll(el){
+      if(!el) return;
+      const DRAG_THRESHOLD = 5;
+      let isDown = false, moved = false, startX = 0, scrollLeft = 0;
+      let suppressClick = false;
+      el.addEventListener('pointerdown', (e)=>{
+        // Do not start drag immediately; wait for threshold
+        isDown = true; moved = false; startX = e.clientX; scrollLeft = el.scrollLeft; el.setPointerCapture(e.pointerId);
+      });
+      el.addEventListener('pointermove', (e)=>{
+        if(!isDown) return;
+        const dx = e.clientX - startX;
+        if(!moved && Math.abs(dx) >= DRAG_THRESHOLD){ moved = true; el.classList.add('dragging'); }
+        if(moved){ el.scrollLeft = scrollLeft - dx; }
+      });
+      ['pointerup','pointercancel','pointerleave'].forEach(evt=>{
+        el.addEventListener(evt, ()=>{
+          if(moved){ suppressClick = true; setTimeout(()=>{ suppressClick = false; }, 0); }
+          isDown = false; moved = false; el.classList.remove('dragging');
+        });
+      });
+      // Prevent navigation when a drag happened; allow normal clicks otherwise
+      el.addEventListener('click', (e)=>{
+        if(suppressClick){ e.preventDefault(); e.stopPropagation(); suppressClick = false; }
+      }, true);
+      // Touch fallback (iOS Safari or browsers without Pointer Events)
+      let touchActive = false, touchMoved = false, touchStartX = 0, touchStartScroll = 0;
+      el.addEventListener('touchstart', (e)=>{
+        const t = e.touches[0]; if(!t) return; touchActive = true; touchMoved = false; touchStartX = t.clientX; touchStartScroll = el.scrollLeft;
+      }, { passive:true });
+      el.addEventListener('touchmove', (e)=>{
+        if(!touchActive) return; const t = e.touches[0]; if(!t) return; const dx = t.clientX - touchStartX;
+        if(!touchMoved && Math.abs(dx) >= DRAG_THRESHOLD){ touchMoved = true; el.classList.add('dragging'); }
+        if(touchMoved){ el.scrollLeft = touchStartScroll - dx; e.preventDefault(); }
+      }, { passive:false });
+      el.addEventListener('touchend', (e)=>{
+        if(touchMoved){
+          // prevent the ghost click after drag
+          e.preventDefault();
+          suppressClick = true; setTimeout(()=>{ suppressClick = false; }, 0);
+        }
+        touchActive = false; touchMoved = false; el.classList.remove('dragging');
+      });
+      // Wheel to horizontal
+      el.addEventListener('wheel', (e)=>{
+        if(Math.abs(e.deltaY) > Math.abs(e.deltaX)){
+          el.scrollLeft += e.deltaY; e.preventDefault();
+        }
+      }, { passive:false });
+    }
+    function resetScroll(){
+      const el = document.querySelector('.admin-topbar .right-scroll');
+      if(el){ el.scrollLeft = 0; }
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+      const scroller = document.querySelector('.admin-topbar .right-scroll');
+      enableDragScroll(scroller);
+      // Reset after layout
+      resetScroll();
+      // Scroll buttons
+      const btnL = document.querySelector('.admin-topbar .actions-scroll-left');
+      const btnR = document.querySelector('.admin-topbar .actions-scroll-right');
+      function hasOverflow(){ if(!scroller) return false; return scroller.scrollWidth > scroller.clientWidth + 2; }
+      function updateButtons(){
+        if(!scroller || !btnL || !btnR) return;
+        const overflow = hasOverflow();
+        btnL.style.display = overflow ? 'flex' : 'none';
+        btnR.style.display = overflow ? 'flex' : 'none';
+        if(!overflow) return;
+        const atStart = scroller.scrollLeft <= 1;
+        const atEnd = (scroller.scrollLeft + scroller.clientWidth) >= (scroller.scrollWidth - 1);
+        btnL.disabled = atStart;
+        btnR.disabled = atEnd;
+      }
+      function smoothScroll(dx){ if(!scroller) return; scroller.scrollBy({ left: dx, behavior: 'smooth' }); }
+      if(btnL) btnL.addEventListener('click', ()=> smoothScroll(-240));
+      if(btnR) btnR.addEventListener('click', ()=> smoothScroll(240));
+      if(scroller){
+        ['scroll','wheel','pointerup'].forEach(ev=> scroller.addEventListener(ev, updateButtons, {passive:true}));
+      }
+      updateButtons();
+      setTimeout(updateButtons, 200);
+    });
+    window.addEventListener('resize', resetScroll);
+    window.addEventListener('orientationchange', resetScroll);
+  })();
+</script>
+<script>
+  // Topbar buttons: diagnostics + safe navigation fallback
+  (function(){
+    function log(msg){ try { console.debug('[admin-topbar]', msg); } catch(e){} }
+    function isDragging(a){ return !!a.closest('.right-scroll')?.classList.contains('dragging'); }
+    // CAPTURE-PHASE guard on the actions container to outrun page-level handlers
+    document.addEventListener('DOMContentLoaded', function(){
+      var container = document.querySelector('.admin-topbar .right');
+      if (!container) return;
+      container.addEventListener('click', function(e){
+        var a = e.target && e.target.closest && e.target.closest('.admin-topbar .right a[href]');
+        if(!a) return;
+        // Ignore modified/middle/right clicks
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        if (isDragging(a)) { log('capture: suppress during drag'); return; }
+        // Force navigation early to avoid other capture/bubble listeners blocking it
+        log('capture: forcing navigation to ' + a.href);
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        try { window.location.assign(a.href); } catch(err){ window.location.href = a.href; }
+      }, true); // capture=true
+    });
+    document.addEventListener('click', function(e){
+      const a = e.target && e.target.closest && e.target.closest('.admin-topbar .right a[href]');
+      if(!a) return;
+      // Ignore modified clicks (new tab/window) and non-primary
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      // Ignore if our drag-scroll marked as dragging
+      if (isDragging(a)) { log('suppress click due to dragging'); return; }
+      // If some other handler prevented default, force navigation
+      if (e.defaultPrevented) {
+        log('default was prevented by another handler; forcing navigation to ' + a.href);
+        // Stop other post-handlers and navigate
+        e.stopImmediatePropagation();
+        try { window.location.assign(a.href); } catch(err){ window.location.href = a.href; }
+      } else {
+        log('click on topbar link -> ' + a.href);
+      }
+    }, false);
+
+    // Global CAPTURE listener: if an external overlay intercepts clicks,
+    // detect clicks within the topbar visual bounds and route to the link under the point.
+    document.addEventListener('click', function(e){
+      try{
+        // Ignore modified/middle/right clicks globally
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        var topbar = document.querySelector('.admin-topbar');
+        var actions = document.querySelector('.admin-topbar .right');
+        if(!topbar || !actions) return;
+        var r = topbar.getBoundingClientRect();
+        var x = e.clientX, y = e.clientY;
+        // Only handle clicks within topbar area
+        if (x < r.left || x > r.right || y < r.top || y > r.bottom) return;
+        // If event already originated from a topbar link, let the container handler above do it
+        var aDirect = e.target && e.target.closest && e.target.closest('.admin-topbar .right a[href]');
+        if (aDirect) return;
+        // Determine which topbar link visually contains the click point
+        var links = Array.prototype.slice.call(actions.querySelectorAll('a[href]'));
+        var hit = links.find(function(link){
+          var lr = link.getBoundingClientRect();
+          return x >= lr.left && x <= lr.right && y >= lr.top && y <= lr.bottom;
+        });
+        if (!hit) return;
+        if (isDragging(hit)) { log('doc-capture: suppress during drag'); return; }
+        log('doc-capture: forcing navigation to ' + hit.href);
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        try { window.location.assign(hit.href); } catch(err){ window.location.href = hit.href; }
+      }catch(_err){}
+    }, true);
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,602 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block title %}Manage Users{% endblock %}
+{% block admin_page_name %}Users{% endblock %}
+{% block admin_content %}
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-12">
+        <div class="glass-frame hero-unified mb-4 rounded-3">
+          <div class="row align-items-stretch no-gutters">
+            <div class="col-12 d-flex pr-lg-0">
+              <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+                <div class="hero-body">
+                  <span class="badge badge-pill mb-3">Admin</span>
+                  <h1 class="display-5 mb-2">Users</h1>
+                  <p class="text-white-75 mb-0">Manage users, status, MFA and bulk actions.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="section-header section-header-on-green d-flex justify-content-between align-items-center mb-3">
+              <h5 class="mb-0 text-white">Manage Users</h5>
+            </div>
+            <form method="get" class="mb-3" role="search" aria-label="Search users" novalidate>
+              <div class="input-group search-group">
+                <span class="input-group-text"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" class="form-control" name="q" value="{{ q }}" placeholder="Search by username or email" />
+                {% if status %}<input type="hidden" name="status" value="{{ status }}" />{% endif %}
+                <button id="searchBtn" class="btn btn-brand px-4" type="button" style="box-shadow: none;">Search</button>
+              </div>
+            </form>
+            <div class="mb-3">
+              <div class="d-flex overflow-auto" role="group" aria-label="Status filters" style="gap:.5rem; padding-bottom:.25rem;">
+                <a class="pill {% if not status %}active{% endif %}" href="?page=1{% if q %}&q={{ q }}{% endif %}">All <span class="count">{{ total }}</span></a>
+                <a class="pill {% if status == 'active' %}active{% endif %}" href="?page=1&status=active{% if q %}&q={{ q }}{% endif %}">Active <span class="count">{{ total_active }}</span></a>
+                <a class="pill {% if status == 'inactive' %}active{% endif %}" href="?page=1&status=inactive{% if q %}&q={{ q }}{% endif %}">Inactive <span class="count">{{ total_inactive }}</span></a>
+                <a class="pill {% if status == 'staff' %}active{% endif %}" href="?page=1&status=staff{% if q %}&q={{ q }}{% endif %}">Staff <span class="count">{{ total_staff }}</span></a>
+                <a class="pill {% if status == 'superuser' %}active{% endif %}" href="?page=1&status=superuser{% if q %}&q={{ q }}{% endif %}">Superusers <span class="count">{{ total_superuser }}</span></a>
+                <a class="pill {% if status == 'totp' %}active{% endif %}" href="?page=1&status=totp{% if q %}&q={{ q }}{% endif %}">TOTP <span class="count">{{ total_totp }}</span></a>
+                <a class="pill {% if status == 'no_login' %}active{% endif %}" href="?page=1&status=no_login{% if q %}&q={{ q }}{% endif %}">No login <span class="count">{{ total_no_login }}</span></a>
+                <a class="pill {% if status == 'no_email' %}active{% endif %}" href="?page=1&status=no_email{% if q %}&q={{ q }}{% endif %}">No email <span class="count">{{ total_no_email }}</span></a>
+                <a class="pill {% if status == 'no_mfa' %}active{% endif %}" href="?page=1&status=no_mfa{% if q %}&q={{ q }}{% endif %}">No MFA <span class="count">{{ total_no_mfa }}</span></a>
+                <a class="pill {% if status == 'joined_30d' %}active{% endif %}" href="?page=1&status=joined_30d{% if q %}&q={{ q }}{% endif %}">Joined 30d <span class="count">{{ total_joined_30d }}</span></a>
+                <a class="pill {% if status == 'high_risk' %}active{% endif %}" href="?page=1&status=high_risk{% if q %}&q={{ q }}{% endif %}">High Risk <span class="count">{{ high_risk_users }}</span></a>
+              </div>
+              <div class="d-flex align-items-center justify-content-end gap-2 toolbar mt-2">
+                <div class="btn-group" role="group" aria-label="Bulk actions">
+                  <button type="button" class="btn btn-icon js-bulk" data-action="activate" data-toggle="tooltip" title="Activate selected"><i class="fas fa-user-check"></i></button>
+                  <button type="button" class="btn btn-icon js-bulk" data-action="deactivate" data-toggle="tooltip" title="Deactivate selected"><i class="fas fa-user-slash"></i></button>
+                  <button type="button" class="btn btn-icon js-bulk" data-action="send_reset" data-toggle="tooltip" title="Send password reset"><i class="fas fa-envelope"></i></button>
+                  <button type="button" class="btn btn-icon danger js-bulk" data-action="delete" data-toggle="tooltip" title="Delete selected"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="dropdown">
+                  <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="colMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Columns</button>
+                  <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="colMenu">
+                    <li><label class="dropdown-item"><input type="checkbox" class="mr-2 js-col-toggle" data-col="email" checked> Email</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="mr-2 js-col-toggle" data-col="joined" checked> Joined</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="mr-2 js-col-toggle" data-col="status" checked> Status</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="mr-2 js-col-toggle" data-col="mfa" checked> MFA</label></li>
+                    <li><label class="dropdown-item"><input type="checkbox" class="mr-2 js-col-toggle" data-col="risk" checked> Risk Level</label></li>
+                  </ul>
+                </div>
+                <a class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center" href="{% url 'mfa:admin_users_export' %}?page=1{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}" title="Export CSV" aria-label="Export CSV"><i class="fas fa-file-csv"></i></a>
+                <div class="text-muted small ml-1">Total: {{ total }}</div>
+              </div>
+            </div>
+            <div id="loadingOverlay" class="admin-overlay" style="display:none;">
+              <div class="overlay-center text-center">
+                <div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle">
+                <thead>
+                  <tr>
+                    <th style="width:32px;"><input type="checkbox" id="select-all" aria-label="Select all"></th>
+                    <th>User</th>
+                    <th class="d-none d-md-table-cell col-email">Email</th>
+                    <th class="col-joined">Joined</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-mfa">MFA (TOTP)</th>
+                    <th class="col-risk">Risk Level</th>
+                    <th class="text-center actions-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for u in users %}
+                    <tr>
+                      <td><input type="checkbox" class="select-row" value="{{ u.id }}" aria-label="Select {{ u.username }}"></td>
+                      <td>
+                        <div class="d-flex align-items-center" style="gap:8px;">
+                          <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center user-avatar">
+                            {{ u.username|default:u.email|first|upper }}
+                          </div>
+                          <div>
+                            <a class="user-link" href="{% url 'mfa:admin_user_detail' u.id %}">{{ u.username|default:'-' }}</a>
+                            <div class="small text-muted d-md-none">{{ u.email|default:'-' }}</div>
+                            {% if u.is_superuser %} <span class="badge bg-danger">superuser</span>{% elif u.is_staff %} <span class="badge bg-secondary">staff</span>{% endif %}
+                          </div>
+                        </div>
+                      </td>
+                      <td class="d-none d-md-table-cell col-email">{{ u.email|default:'-' }}</td>
+                      <td class="col-joined">{{ u.date_joined|date:'Y-m-d H:i' }}</td>
+                      <td class="col-status">
+                        {% if u.is_active %}
+                          <span class="badge bg-success">Active</span>
+                        {% else %}
+                          <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                      </td>
+                      <td class="col-mfa">{% if u.has_totp %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
+                      <td class="col-risk">
+                        <span class="badge js-risk-badge bg-{{ u.risk_color }}" data-user-id="{{ u.id }}" data-toggle="tooltip" title="Risk Score: {{ u.risk_score }}/100{% if u.recent_failures %} | {{ u.recent_failures }} recent failures{% endif %}">
+                          {{ u.risk_level }}
+                        </span>
+                      </td>
+                      <td class="text-center actions-col">
+                        {% csrf_token %}
+                        <div class="btn-group btn-group-sm" role="group" aria-label="User actions">
+                          {% if u.is_active %}
+                            <button class="btn btn-outline-warning js-action" data-toggle="tooltip" title="Deactivate" aria-label="Deactivate" data-url="{% url 'mfa:admin_deactivate_user' u.id %}"><i class="fas fa-user-slash fa-fw"></i></button>
+                          {% else %}
+                            <button class="btn btn-outline-success js-action" data-toggle="tooltip" title="Activate" aria-label="Activate" data-url="{% url 'mfa:admin_activate_user' u.id %}"><i class="fas fa-user-check fa-fw"></i></button>
+                          {% endif %}
+                          <a class="btn btn-outline-primary" data-toggle="tooltip" title="Details" aria-label="Details" href="{% url 'mfa:admin_user_detail' u.id %}"><i class="fas fa-cog fa-fw"></i></a>
+                          {% if u.risk_score >= 60 %}
+                            <button class="btn btn-outline-warning js-contact-user" data-user-id="{{ u.id }}" data-toggle="tooltip" title="Contact User" aria-label="Contact User"><i class="fas fa-envelope fa-fw"></i></button>
+                          {% endif %}
+                          {% if u.risk_score >= 80 %}
+                            <button class="btn btn-outline-danger js-restrict-access" data-user-id="{{ u.id }}" data-toggle="tooltip" title="Restrict Access" aria-label="Restrict Access"><i class="fas fa-ban fa-fw"></i></button>
+                          {% endif %}
+                          {% if user.is_superuser %}
+                            <button class="btn btn-outline-secondary js-assign-role" data-user-id="{{ u.id }}" data-toggle="tooltip" title="Assign Role" aria-label="Assign Role"><i class="fas fa-user-tag fa-fw"></i></button>
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                  {% empty %}
+                    <tr><td colspan="8" class="text-muted">No users found.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <nav class="d-flex justify-content-center align-items-center gap-2">
+              <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if page <= 1 %}disabled{% endif %}"><a class="page-link" href="?page={{ page|add:'-1' }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Prev</a></li>
+                <li class="page-item disabled"><span class="page-link">Page {{ page }} of {{ total_pages }}</span></li>
+                <li class="page-item {% if page >= total_pages %}disabled{% endif %}"><a class="page-link" href="?page={{ page|add:'1' }}{% if q %}&q={{ q }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Next</a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+{% block extra_css %}
+  {{ block.super }}
+  <style>
+    .section-header-on-green {
+      background: linear-gradient(135deg, rgba(118,185,87,0.98) 0%, rgba(63,111,44,0.98) 100%);
+      color: #ffffff !important;
+      margin: -1.25rem -1.25rem 0 -1.25rem; /* exactly match .card-body default padding so it doesn't overflow */
+      padding: 1.25rem 1.5rem;          /* match settings/statistics */
+      border-radius: 0.375rem 0.375rem 0 0;
+      overflow: hidden;
+      min-height: 60px;
+    }
+    .section-header-on-green h5 {
+      color: #ffffff !important;
+      margin: 0;
+      font-weight: 600; /* Bootstrap 4.6 equivalent of font-weight-bold */
+    }
+    .btn-brand {
+      color: #fff; background-color: var(--brand-color, #55833d); border-color: var(--brand-color, #55833d);
+      box-shadow: none !important;
+    }
+    .toolbar .btn { box-shadow: none !important; }
+    .btn-brand:hover, .btn-brand:focus {
+      color: #fff; background-color: #446a32; border-color: #3e612d;
+    }
+    .btn-icon {
+      border: 1px solid #e1e6ea; background: #fff; color: #334155; width: 34px; height: 34px;
+      display: inline-flex; align-items: center; justify-content: center; border-radius: .35rem;
+    }
+    .btn-icon:hover { background: #f8fafb; color: #111827; }
+    .btn-icon.danger { color: #b91c1c; border-color: #f1d5d5; }
+    .btn-icon.danger:hover { background: #fef2f2; }
+
+    /* Toolbar visual harmony */
+    .toolbar .btn-sm { height: 32px; min-height: 32px; padding: .25rem .5rem; line-height: 1.1; }
+    .toolbar .btn-icon { width: 32px; height: 32px; }
+    .toolbar .btn-group .btn-icon { border-radius: 0; }
+    .toolbar .btn-group .btn-icon + .btn-icon { margin-left: -1px; } /* collapse inner borders */
+    .toolbar .btn-group .btn-icon:first-child { border-top-left-radius: .35rem; border-bottom-left-radius: .35rem; }
+    .toolbar .btn-group .btn-icon:last-child { border-top-right-radius: .35rem; border-bottom-right-radius: .35rem; }
+
+    /* Columns dropdown button: match toolbar sizing */
+    .toolbar .dropdown .btn { height: 32px; min-height: 32px; padding: .25rem .5rem; line-height: 1.1; display: inline-flex; align-items: center; border-radius: .35rem; box-shadow: none !important; }
+    .toolbar .dropdown .btn:focus { box-shadow: none !important; }
+    .toolbar .dropdown .dropdown-toggle::after { margin-left: .35rem; transform: scale(.9); }
+
+    /* Search group: no inner curves */
+    .search-group .input-group-text { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+    .search-group .form-control { border-radius: 0; }
+    .search-group .btn { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+    .search-group .input-group-text, .search-group .form-control, .search-group .btn {
+      height: 32px; min-height: 32px; box-sizing: border-box;
+    }
+    .search-group .input-group-text { display: flex; align-items: center; padding: .25rem .5rem; }
+    .search-group .form-control { padding: .25rem .5rem; line-height: 1.2; }
+    .search-group .btn { display: inline-flex; align-items: center; padding: .25rem .75rem; line-height: 1.2; }
+
+    /* Filter pills */
+    .pill {
+      display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .7rem; border-radius: 999px;
+      background: #f4f7f9; color: #334155; border: 1px solid #e1e6ea; text-decoration: none; font-weight: 600; font-size: .9rem;
+      white-space: nowrap;
+    }
+    .pill .count { background: #e9edf0; border-radius: 999px; padding: .05rem .4rem; font-weight: 700; font-size: .8rem; }
+    .pill:hover { background: #eef3f6; color: #111827; }
+    .pill.active { background: var(--brand-color, #55833d); color: #fff; border-color: var(--brand-color, #55833d); }
+    .pill.active .count { background: rgba(255,255,255,.18); color: #fff; }
+
+    /* Table styling */
+    .table thead th { background: #f8fafb; border-top: none; color: #475569; }
+    .table tbody tr:hover { background: #fcfdfd; }
+    .table td, .table th { vertical-align: middle; }
+
+    /* Avatar */
+    .user-avatar { width:28px; height:28px; font-size:12px; }
+
+    /* Toolbar layout: keep inline, remove wrapping */
+    .toolbar { flex-wrap: nowrap !important; }
+    .toolbar > * + * { margin-left: .5rem; }
+    .toolbar .dropdown, .toolbar .btn, .toolbar .text-muted { white-space: nowrap; }
+    /* Hidden column utility for column toggler */
+    .hidden-col { display: none !important; }
+    /* Keep toolbar tidy; use global h2Title from MFA stylesheet */
+    /* Center action buttons column */
+    td.text-center .btn-group { display: inline-flex; justify-content: center; align-items: center; }
+    td.text-center .btn-group .btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border-radius: .35rem; }
+    /* Square inner corners between buttons and collapse inner border */
+    td.actions-col .btn-group .btn + .btn { margin-left: -1px; }
+    td.actions-col .btn-group .btn:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; border-radius: .35rem 0 0 .35rem; }
+    td.actions-col .btn-group .btn:last-child  { border-top-left-radius: 0;  border-bottom-left-radius: 0;  border-radius: 0 .35rem .35rem 0; }
+    /* Center the icons themselves inside the buttons */
+    td.text-center .btn-group .btn i { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; line-height: 1; margin: 0; vertical-align: middle; }
+    /* Make Actions column width consistent and centered (2 x 32px buttons + spacing) */
+    th.actions-col, td.actions-col { width: 88px; text-align: center; }
+    /* No shadow on click/focus/hover for action buttons */
+    td.actions-col .btn,
+    td.actions-col .btn:hover,
+    td.actions-col .btn:focus,
+    td.actions-col .btn:active,
+    td.actions-col .btn:focus-visible,
+    td.actions-col .btn:active:focus,
+    td.actions-col .btn-check:focus + .btn { box-shadow: none !important; }
+    /* Keep icon perfectly centered */
+    td.actions-col .btn-group .btn i { width: 1em; height: 1em; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+    /* Keep icon/text color stable for row action buttons */
+    td.actions-col .btn-group .btn,
+    td.actions-col .btn-group .btn i { color: #334155 !important; }
+    td.actions-col .btn-group .btn:hover,
+    td.actions-col .btn-group .btn:focus,
+    td.actions-col .btn-group .btn:active,
+    td.actions-col .btn-group .btn:focus-visible { color: #334155 !important; background: #f8fafb !important; border-color: #e1e6ea !important; }
+
+    /* Toolbar icon buttons: keep icon centered and color stable */
+    .toolbar .btn-group .btn-icon i { width: 1em; height: 1em; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+    .toolbar .btn-group .btn-icon,
+    .toolbar .btn-group .btn-icon i { color: #334155 !important; }
+    .toolbar .btn-group .btn-icon:hover,
+    .toolbar .btn-group .btn-icon:focus,
+    .toolbar .btn-group .btn-icon:active,
+    .toolbar .btn-group .btn-icon:focus-visible { color: #334155 !important; background: #f8fafb !important; border-color: #e1e6ea !important; }
+  </style>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function(){
+  console.log('[users_list] script loaded');
+  function getCookie(name){ const m=document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)'); return m?m.pop():''; }
+  // Typed confirmation overlay (vanilla, reusable)
+  function openConfirmModal(opts){
+    // opts: { title, body, keyword, onConfirm }
+    function sanitize(v){ return (v||'').toUpperCase().replace(/\s+/g,''); }
+    var KEY = sanitize(opts.keyword||'');
+    var overlay = document.getElementById('typedConfirmOverlay');
+    if (!overlay){
+      overlay = document.createElement('div');
+      overlay.id = 'typedConfirmOverlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1050;';
+      var dialog = document.createElement('div');
+      dialog.style.cssText = 'background:#fff;border-radius:8px;min-width:300px;max-width:480px;width:92%;box-shadow:0 10px 30px rgba(0,0,0,.2);overflow:hidden;';
+      dialog.innerHTML = '\n  <div style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:16px;" id="tcoTitle"></div>\n  <div style="padding:16px;">\n    <div id="tcoBody" style="margin-bottom:10px;font-size:14px;color:#334155;"></div>\n    <input type="text" id="tcoInput" class="form-control" style="text-transform:uppercase;" placeholder="" />\n  </div>\n  <div style="padding:12px 16px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end;">\n    <button type="button" class="btn btn-secondary" id="tcoCancel">Cancel</button>\n    <button type="button" class="btn btn-primary" id="tcoConfirm" disabled>Confirm</button>\n  </div>';
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+    }
+    var titleEl = document.getElementById('tcoTitle');
+    var bodyEl = document.getElementById('tcoBody');
+    var inputEl = document.getElementById('tcoInput');
+    var btnConfirm = document.getElementById('tcoConfirm');
+    var btnCancel = document.getElementById('tcoCancel');
+    titleEl.textContent = opts.title || 'Confirm';
+    bodyEl.textContent = opts.body || ('Type ' + KEY + ' to confirm.');
+    inputEl.placeholder = KEY;
+    inputEl.value = '';
+    btnConfirm.disabled = true;
+    function evalState(){ var v = sanitize(inputEl.value); inputEl.value = v; btnConfirm.disabled = (v !== KEY); }
+    inputEl.oninput = evalState; inputEl.onkeyup = evalState; inputEl.onchange = evalState;
+    inputEl.onkeydown = function(e){ if(e.key==='Enter' && !btnConfirm.disabled){ e.preventDefault(); btnConfirm.click(); } };
+    btnCancel.onclick = function(){ overlay.style.display = 'none'; };
+    btnConfirm.onclick = function(){ try{ if(typeof opts.onConfirm==='function'){ opts.onConfirm(); } } finally { overlay.style.display='none'; } };
+    overlay.style.display = 'flex';
+    setTimeout(function(){ inputEl.focus(); }, 50);
+  }
+
+  // Row actions via delegation
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.js-action');
+    if (!btn) return;
+    e.preventDefault();
+    try {
+      var url = btn.getAttribute('data-url');
+      var label = (btn.getAttribute('aria-label')||btn.getAttribute('title')||'').toUpperCase();
+      var keyword = (label.indexOf('DEACTIVATE')>-1) ? 'DEACTIVATE' : 'ACTIVATE';
+      openConfirmModal({
+        title: (keyword==='DEACTIVATE'?'Confirm Deactivate':'Confirm Activate'),
+        body: 'Type ' + keyword + ' to confirm.',
+        keyword: keyword,
+        onConfirm: function(){
+          fetch(url, { method:'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') } })
+            .then(r=>r.json())
+            .then(function(data){ if(data && data.success){ window.location.reload(); } else { alert((data && data.error) || 'Failed'); }})
+            .catch(function(){ alert('Request failed'); });
+        }
+      });
+
+  // Live risk refresh: bulk fetch for visible users
+  try {
+    var ids = Array.from(document.querySelectorAll('tbody .select-row'))
+      .map(function(cb){ return parseInt(cb.value, 10); })
+      .filter(function(id){ return !isNaN(id); });
+    if (ids.length) {
+      fetch('{% url "mfa:admin_api_users_security_scores" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ ids: ids })
+      }).then(function(r){ return r.json(); }).then(function(data){
+        if (!data || !data.results) return;
+        Object.keys(data.results).forEach(function(k){
+          var res = data.results[k];
+          var badge = document.querySelector('.js-risk-badge[data-user-id="'+k+'"]');
+          if (!badge) return;
+          // Update class
+          badge.classList.remove('bg-success','bg-info','bg-warning','bg-danger');
+          if (res.risk_color) badge.classList.add('bg-'+res.risk_color);
+          // Update text and tooltip
+          badge.textContent = res.risk_level || 'Low';
+          var tip = 'Risk Score: '+(res.risk_score||0)+'/100';
+          if (res.recent_failures) tip += ' | '+res.recent_failures+' recent failures';
+          badge.setAttribute('title', tip);
+        });
+        // Re-init Bootstrap tooltips after dynamic updates
+        $(function(){ $('[data-toggle="tooltip"]').tooltip(); });
+      }).catch(function(err){ console.warn('risk refresh failed', err); });
+    }
+  } catch (e) { console.warn('risk refresh init error', e); }
+    } catch(err){ console.error('Row action failed', err); }
+  });
+  // Enable tooltips for icon-only buttons
+  $(function(){ $('[data-toggle="tooltip"]').tooltip(); });
+  // Keep Columns dropdown open when clicking inside
+  $(function(){ $('.dropdown-menu').on('click', function(e){ e.stopPropagation(); }); });
+  // Submit search without HTML5 validation (button is type=button)
+  var searchBtn = document.getElementById('searchBtn');
+  if (searchBtn) {
+    searchBtn.addEventListener('click', function(){
+      var form = this.closest('form');
+      if (form) form.submit();
+    });
+  }
+  // Bulk selection and actions
+  var selectAll = document.getElementById('select-all');
+  if (selectAll) {
+    selectAll.addEventListener('change', function(){
+      document.querySelectorAll('.select-row').forEach(function(cb){ cb.checked = selectAll.checked; });
+    });
+  }
+  // Shift multi-select
+  var lastChecked = null;
+  document.querySelectorAll('.select-row').forEach(function(cb){
+    cb.addEventListener('click', function(e){
+      if(!lastChecked){ lastChecked = this; return; }
+      if(e.shiftKey){
+        var boxes = Array.from(document.querySelectorAll('.select-row'));
+        var start = boxes.indexOf(this);
+        var end = boxes.indexOf(lastChecked);
+        var [s, e2] = start < end ? [start, end] : [end, start];
+        boxes.slice(s, e2 + 1).forEach(function(b){ b.checked = lastChecked.checked; });
+      }
+      lastChecked = this;
+    });
+  });
+  function getSelectedIds(){
+    var ids = [];
+    document.querySelectorAll('.select-row:checked').forEach(function(cb){ ids.push(cb.value); });
+    return ids;
+  }
+  var actionKeywordMap = { activate: 'ACTIVATE', deactivate: 'DEACTIVATE', send_reset: 'SEND', delete: 'DELETE' };
+  // Bulk actions via delegation
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.js-bulk');
+    if (!btn) return;
+    e.preventDefault();
+    try {
+      var ids = getSelectedIds();
+      if (!ids.length) { alert('Select at least one user.'); return; }
+      var action = btn.getAttribute('data-action');
+      var keyword = actionKeywordMap[action] || 'CONFIRM';
+      console.log('Bulk action clicked', action, ids);
+      openConfirmModal({
+        title: 'Confirm Bulk ' + keyword.charAt(0) + keyword.slice(1).toLowerCase(),
+        body: 'Type ' + keyword + ' to confirm bulk action for ' + ids.length + ' user(s).',
+        keyword: keyword,
+        onConfirm: function(){
+          document.getElementById('loadingOverlay').style.display = 'block';
+          fetch('{% url "mfa:admin_users_bulk" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ action: action, ids: ids })
+          }).then(r=>r.json()).then(function(data){
+            if (data && data.success) { window.location.reload(); }
+            else { alert((data && data.error) || 'Bulk action failed'); }
+          }).catch(function(){ alert('Request failed'); }).finally(function(){ document.getElementById('loadingOverlay').style.display = 'none'; });
+        }
+      });
+    } catch(err){ console.error('Bulk action failed', err); }
+  });
+  // Removed inline role toggle and permissions links
+  // Risk management actions
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.js-contact-user');
+    if (btn) {
+      e.preventDefault();
+      var userId = btn.getAttribute('data-user-id');
+      openConfirmModal({
+        title: 'Contact High-Risk User',
+        body: 'Type CONTACT to send security reminder email.',
+        keyword: 'CONTACT',
+        onConfirm: function(){
+          fetch('{% url "mfa:admin_contact_user" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ user_id: userId })
+          }).then(r=>r.json()).then(function(data){
+            if (data && data.success) { alert('Security reminder sent successfully.'); }
+            else { alert((data && data.error) || 'Failed to send reminder.'); }
+          }).catch(function(){ alert('Request failed'); });
+        }
+      });
+      return;
+    }
+    
+    btn = e.target.closest('.js-restrict-access');
+    if (btn) {
+      e.preventDefault();
+      var userId = btn.getAttribute('data-user-id');
+      openConfirmModal({
+        title: 'Restrict High-Risk User Access',
+        body: 'Type RESTRICT to temporarily restrict user access.',
+        keyword: 'RESTRICT',
+        onConfirm: function(){
+          fetch('{% url "mfa:admin_restrict_user" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+            body: JSON.stringify({ user_id: userId })
+          }).then(r=>r.json()).then(function(data){
+            if (data && data.success) { 
+              alert('User access restricted successfully.'); 
+              window.location.reload();
+            }
+            else { alert((data && data.error) || 'Failed to restrict access.'); }
+          }).catch(function(){ alert('Request failed'); });
+        }
+      });
+      return;
+    }
+
+    // Assign Role (superuser only)
+    btn = e.target.closest('.js-assign-role');
+    if (btn) {
+      e.preventDefault();
+      var userId = parseInt(btn.getAttribute('data-user-id'), 10);
+      // Build a lightweight overlay with a role <select>
+      var overlay = document.getElementById('assignRoleOverlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'assignRoleOverlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1050;';
+        var dialog = document.createElement('div');
+        dialog.style.cssText = 'background:#fff;border-radius:8px;min-width:320px;max-width:520px;width:92%;box-shadow:0 10px 30px rgba(0,0,0,.2);overflow:hidden;';
+        dialog.innerHTML = '\n  <div class="section-header-on-green" style="border-bottom:1px solid rgba(255,255,255,.15);padding:.9rem 1rem;border-radius:8px 8px 0 0;">\n    <h6 class="mb-0 text-white">Assign Role</h6>\n  </div>\n  <div style="padding:16px;">\n    <label for="roleSelect" class="form-label">Select a role</label>\n    <select id="roleSelect" class="form-control"></select>\n  </div>\n  <div style="padding:12px 16px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end;">\n    <button type="button" class="btn btn-outline-secondary" id="arCancel">Cancel</button>\n    <button type="button" class="btn btn-brand" id="arAssign">Assign</button>\n  </div>';
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+      }
+      // Populate roles
+      var roleSelect = overlay.querySelector('#roleSelect');
+      roleSelect.innerHTML = '<option disabled selected>Loading...</option>';
+      fetch('{% url "mfa:admin_roles_list" %}')
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          roleSelect.innerHTML = '';
+          (data.roles||[]).forEach(function(r){
+            var opt = document.createElement('option');
+            opt.value = r.id; opt.textContent = r.name; roleSelect.appendChild(opt);
+          });
+          if (!roleSelect.options.length){
+            var opt = document.createElement('option');
+            opt.disabled = true; opt.selected = true; opt.textContent = 'No roles available';
+            roleSelect.appendChild(opt);
+          }
+        }).catch(function(){ roleSelect.innerHTML = '<option disabled selected>Error loading roles</option>'; });
+      // Wire buttons
+      overlay.style.display = 'flex';
+      overlay.querySelector('#arCancel').onclick = function(){ overlay.style.display = 'none'; };
+      overlay.querySelector('#arAssign').onclick = function(){
+        var rid = parseInt(roleSelect.value, 10);
+        if (!rid) { alert('Please select a role'); return; }
+        fetch('{% url "mfa:admin_assign_role_to_user" %}', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify({ user_id: userId, role_id: rid })
+        }).then(function(r){ return r.json(); }).then(function(data){
+          if (data && data.success) { overlay.style.display = 'none'; alert('Role assigned'); }
+          else { alert((data && data.error) || 'Failed to assign role'); }
+        }).catch(function(){ alert('Request failed'); });
+      };
+      return;
+    }
+  });
+
+  // Column controls with localStorage
+  function applyColState(){
+    var state = {};
+    try { state = JSON.parse(localStorage.getItem('users_col_state')||'{}'); } catch(e){}
+    var table = document.querySelector('table');
+    ['email','joined','status','mfa','risk'].forEach(function(col){
+      var enabled = state[col] !== false; // default true
+      var check = document.querySelector('.js-col-toggle[data-col="'+col+'"]');
+      if (check) check.checked = enabled;
+      // Class-based toggle (header + cells already marked)
+      document.querySelectorAll('.col-'+col).forEach(function(el){ el.classList.toggle('hidden-col', !enabled); });
+      // Index-based fallback to ensure full column hides
+      if (table) {
+        var th = table.querySelector('thead th.col-'+col);
+        if (th) {
+          var idx = th.cellIndex; // 0-based
+          // toggle header cell explicitly
+          th.classList.toggle('hidden-col', !enabled);
+          // toggle all body cells at this index
+          table.querySelectorAll('tbody tr').forEach(function(tr){
+            var td = tr.children[idx];
+            if (td) td.classList.toggle('hidden-col', !enabled);
+          });
+        }
+      }
+    });
+  }
+  document.querySelectorAll('.js-col-toggle').forEach(function(input){
+    input.addEventListener('change', function(){
+      var state = {};
+      try { state = JSON.parse(localStorage.getItem('users_col_state')||'{}'); } catch(e){}
+      state[this.getAttribute('data-col')] = this.checked;
+      localStorage.setItem('users_col_state', JSON.stringify(state));
+      applyColState();
+    });
+  });
+  applyColState();
+  // Keyboard navigation
+  var rows = Array.from(document.querySelectorAll('tbody tr'));
+  var idx = -1;
+  document.addEventListener('keydown', function(e){
+    if (['ArrowDown','ArrowUp',' '].indexOf(e.key) === -1) return;
+    if (rows.length === 0) return;
+    e.preventDefault();
+    if (e.key === 'ArrowDown') { idx = Math.min(idx+1, rows.length-1); rows[idx].scrollIntoView({block:'nearest'}); rows[idx].classList.add('table-active'); }
+    if (e.key === 'ArrowUp') { idx = Math.max(idx-1, 0); rows[idx].scrollIntoView({block:'nearest'}); rows[idx].classList.add('table-active'); }
+    if (e.key === ' ') {
+      var cb = rows[idx] && rows[idx].querySelector('.select-row'); if (cb) cb.checked = !cb.checked;
+    }
+  });
+})();
+</script>
+{% endblock %}

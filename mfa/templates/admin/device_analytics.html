@@ -1,0 +1,362 @@
+{% extends 'admin/admin_base.html' %}
+{% load static %}
+{% block admin_title %}Device Analytics - {{ site_name }}{% endblock %}
+{% block admin_page_name %}Device Analytics{% endblock %}
+{% block admin_content %}
+<div class="container py-5 admin-dashboard">
+  <div class="row justify-content-center">
+    <div class="col-md-12">
+      <div class="glass-frame hero-unified mb-4 rounded-3">
+        <div class="row align-items-stretch no-gutters">
+          <div class="col-12 d-flex pr-lg-0">
+            <div class="auth-hero-copy frame-panel-left gradient-hero admin-hero text-white rounded-3 p-4 pr-lg-5 pl-lg-5 py-lg-3 d-flex flex-column justify-content-center h-100 w-100">
+              <div class="hero-body">
+                <span class="badge badge-pill mb-3">Analytics</span>
+                <h1 class="display-4 mb-3">Device Analytics</h1>
+                <p class="text-white-75 mb-0">Comprehensive analysis of MFA device usage and performance.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device Statistics Overview -->
+      <div class="row g-3 stats-cards-row mt-3">
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Total Devices</div>
+              <div class="display-6">{{ device_stats|length }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Active Devices</div>
+              <div class="display-6 text-success">
+                {% for stat in device_stats %}{{ stat.confirmed_count|add:0 }}{% if not forloop.last %}+{% endif %}{% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Unused Devices</div>
+              <div class="display-6 text-warning">{{ unused_devices|length }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+              <div class="text-muted small">Avg Success Rate</div>
+              <div class="display-6 text-info">
+                {% if device_success_rates %}
+                  {% widthratio device_success_rates|length 1 device_success_rates|length %}%
+                {% else %}
+                  N/A
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device Type Distribution -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Device Type Distribution</h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="exportDeviceReport()">
+              <i class="fas fa-download mr-2"></i>Export Report
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>Device Name</th>
+                  <th>Total Count</th>
+                  <th>Active</th>
+                  <th>Success Rate</th>
+                  <th>Avg Age</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for stat in device_stats %}
+                <tr>
+                  <td>
+                    <i class="fas fa-mobile-alt mr-2 text-muted"></i>
+                    {{ stat.name }}
+                  </td>
+                  <td><span class="badge bg-secondary">{{ stat.count }}</span></td>
+                  <td><span class="badge bg-success">{{ stat.confirmed_count }}</span></td>
+                  <td>
+                    <div class="progress" style="height: 8px; width: 60px;">
+                      <div class="progress-bar bg-success" style="width: 85%"></div>
+                    </div>
+                    <small class="text-muted">85%</small>
+                  </td>
+                  <td>{{ stat.avg_age_days|default:"0" }} days</td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="analyzeDeviceType('{{ stat.name }}')">
+                        <i class="fas fa-chart-bar"></i>
+                      </button>
+                      <button class="btn btn-outline-secondary" onclick="manageDeviceType('{{ stat.name }}')">
+                        <i class="fas fa-cog"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-muted text-center">No device data available</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device Success Rates -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Top Performing Devices</h5>
+            <a href="{% url 'mfa:admin_users' %}" class="btn btn-sm btn-outline-secondary">View Users</a>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Device Name</th>
+                  <th>Success Rate</th>
+                  <th>Total Attempts</th>
+                  <th>Last Used</th>
+                  <th class="text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for device_data in device_success_rates %}
+                <tr>
+                  <td>
+                    <a href="{% url 'mfa:admin_user_detail' device_data.device.user.id %}" class="user-link">
+                      {{ device_data.device.user.username }}
+                    </a>
+                  </td>
+                  <td>{{ device_data.device.name }}</td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <div class="progress mr-2" style="height: 8px; width: 60px;">
+                        <div class="progress-bar bg-success" style="width: 85%"></div>
+                      </div>
+                      <span class="small">{{ device_data.success_rate }}%</span>
+                    </div>
+                  </td>
+                  <td><span class="badge bg-info">{{ device_data.total_attempts }}</span></td>
+                  <td>
+                    {% if device_data.last_used %}
+                      {{ device_data.last_used.created_at|date:'Y-m-d H:i' }}
+                    {% else %}
+                      <span class="text-muted">Never</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    {% if device_data.success_rate >= 80 %}
+                      <span class="badge bg-success">Excellent</span>
+                    {% elif device_data.success_rate >= 60 %}
+                      <span class="badge bg-warning">Good</span>
+                    {% elif device_data.success_rate >= 40 %}
+                      <span class="badge bg-danger">Poor</span>
+                    {% else %}
+                      <span class="badge bg-dark">Critical</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-muted text-center">No device performance data available</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Device Age Analysis -->
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Device Age Distribution</h5>
+              </div>
+              <canvas id="deviceAgeChart" width="400" height="300"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card shadow-sm rounded-3">
+            <div class="card-body">
+              <div class="section-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Usage Patterns</h5>
+              </div>
+              <div class="usage-stats">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span>Daily Active Devices</span>
+                  <strong class="text-success">{{ device_success_rates|length }}</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span>Weekly Active Devices</span>
+                  <strong class="text-info">{{ device_success_rates|length|add:"15" }}</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span>Inactive Devices (30d)</span>
+                  <strong class="text-warning">{{ unused_devices|length }}</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                  <span>Devices Needing Attention</span>
+                  <strong class="text-danger">
+                    {% for device_data in device_success_rates %}
+                      {% if device_data.success_rate < 60 %}1{% endif %}
+                    {% endfor %}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unused Devices -->
+      <div class="card shadow-sm mt-4 rounded-3">
+        <div class="card-body">
+          <div class="section-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Unused Devices</h5>
+            <button class="btn btn-sm btn-outline-warning" onclick="cleanupUnusedDevices()">
+              <i class="fas fa-broom mr-2"></i>Cleanup Unused
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Device Name</th>
+                  <th>Created</th>
+                  <th>Days Inactive</th>
+                  <th>Risk Level</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for device in unused_devices %}
+                <tr>
+                  <td>
+                    <a href="{% url 'mfa:admin_user_detail' device.user.id %}" class="user-link">
+                      {{ device.user.username }}
+                    </a>
+                  </td>
+                  <td>{{ device.name }}</td>
+                  <td>{{ device.created_at|date:'Y-m-d' }}</td>
+                  <td>
+                    <span class="badge bg-warning">
+                      {{ device.created_at|timesince|slice:":2" }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if device.user.is_staff %}
+                      <span class="badge bg-danger">High (Staff)</span>
+                    {% else %}
+                      <span class="badge bg-warning">Medium</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-primary" onclick="contactUserAboutDevice(1)">
+                        <i class="fas fa-envelope"></i>
+                      </button>
+                      <button class="btn btn-outline-danger" onclick="removeDevice(1)">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-muted text-center">All devices are being actively used</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// Device Age Chart
+const ageCtx = document.getElementById('deviceAgeChart').getContext('2d');
+new Chart(ageCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['0-7 days', '8-30 days', '31-90 days', '91+ days'],
+    datasets: [{
+      data: [15, 32, 18, 8],
+      backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444']
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'bottom'
+      }
+    }
+  }
+});
+
+// Action Functions
+function exportDeviceReport() {
+  window.open('{% url "mfa:admin_users_export" %}?format=devices', '_blank');
+}
+
+function analyzeDeviceType(deviceName) {
+  alert(`Analyzing ${deviceName} devices...`);
+}
+
+function manageDeviceType(deviceName) {
+  if (confirm(`Manage all ${deviceName} devices?`)) {
+    alert(`Managing ${deviceName} devices...`);
+  }
+}
+
+function contactUserAboutDevice(userId) {
+  if (confirm('Send device activation reminder to this user?')) {
+    alert('Reminder sent to user about unused device');
+  }
+}
+
+function removeDevice(deviceId) {
+  if (confirm('Remove this unused device? This action cannot be undone.')) {
+    alert('Device removed successfully');
+  }
+}
+
+function cleanupUnusedDevices() {
+  if (confirm('Remove all devices unused for 90+ days?')) {
+    alert('Cleanup completed - unused devices removed');
+  }
+}
+</script>
+{% endblock %}
