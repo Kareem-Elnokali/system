@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Contact Us - GreenShield Hygiene Services{% endblock %}
+{% block content %}
+    {% include 'partials/navbar.html' %}
+    <section id="CONTACT" class="border-top">
+      <div class="py-3">
+        <div class="my-5">
+          <div>
+            <div class="container servicesShadow padding">
+              <h2 class="text-dark mb-3 text-center h2Title">
+                <span class="purple">C</span>ontact Us
+              </h2>
+              <div class="row">
+                <div class="col-md-6 mt-5">
+                  <div>
+                    <h3 style="font-size: 32px" class="blueLine text-dark">
+                      Request a Service or Ask a Question
+                    </h3>
+                    {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} mt-3" role="alert">{{ message }}</div>
+                    {% endfor %}
+                    {% endif %}
+                    <form action="{% url 'contact' %}" method="post" class="pt-1">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{{ request.path }}#CONTACT" />
+                      <input
+                        type="text"
+                        name="userName"
+                        id="userName"
+                        class="form-control"
+                        style="margin-bottom: 2rem"
+                        placeholder="Your Name"
+                        required
+                      />
+                      <input
+                        type="email"
+                        name="userEmail"
+                        id="userEmail"
+                        class="form-control"
+                        placeholder="Your Email"
+                        style="margin-bottom: 2rem"
+                        required
+                      />
+                      <input
+                        type="text"
+                        name="userSubject"
+                        id="userSubject"
+                        class="form-control"
+                        placeholder="Subject"
+                        required
+                        style="margin-bottom: 2rem"
+                      />
+                      <textarea
+                        name="userMessage"
+                        id="userMessage"
+                        rows="5"
+                        class="form-control"
+                        placeholder="Your Message"
+                        required
+                        style="margin-bottom: 2rem"
+                      ></textarea>
+                      <button type="submit" class="submitButton">
+                        Send Message
+                      </button>
+                    </form>
+                  </div>
+                </div>
+                <div class="col-md-6 mt-5">
+                  <h3 style="font-size: 32px" class="blueLine text-dark">
+                    Get in Touch
+                  </h3>
+                  <p
+                    style="font-size: 1.25rem; font-weight: 300"
+                    class="pb-1 text-dark"
+                  >
+                    For inquiries about our cleaning services, disinfection
+                    packages, or hygiene consultations, contact us directly via
+                    phone, WhatsApp, or email. Our support team will get back to
+                    you shortly.
+                  </p>
+                  <div class="pt-3 text-dark">
+                    <div class="mt-2 align-items-center d-flex">
+                      <span
+                        class="fas fa-phone fa-xs contacticon spansize"
+                      ></span>
+                      <span
+                        class="fab fa-whatsapp fa-xs contacticon spansize"
+                      ></span>
+                      <span class="spansize">
+                        <strong>01234567890</strong> – WhatsApp & Phone Calls
+                      </span>
+                    </div>
+                    <div class="mt-2 align-items-center d-flex">
+                      <span
+                        class="fa-brands fa-whatsapp fa-xs contacticon spansize"
+                      ></span>
+                      <span class="spansize">
+                        <strong>01234567891</strong> – WhatsApp Only
+                      </span>
+                    </div>
+                    <div class="mt-2 align-items-center d-flex">
+                      <span
+                        class="fas fa-envelope fa-xs contacticon spansize"
+                      ></span>
+                      <span class="spansize">info@greenshieldhygiene.com</span>
+                    </div>
+                  </div>
+                  <div class="icon5Parent mt-4">
+                    <a href="#" class="icon5a mx-1" target="_blank">
+                      <i
+                        class="fab fa-whatsapp d-flex justify-content-center align-items-center icon5child"
+                      ></i>
+                    </a>
+                    <a href="#" class="icon5a mx-1">
+                      <i
+                        class="fab fa-facebook-f d-flex justify-content-center align-items-center icon5child"
+                      ></i>
+                    </a>
+                    <a href="#" class="icon5a mx-1">
+                      <i
+                        class="fab fa-instagram d-flex justify-content-center align-items-center icon5child"
+                      ></i>
+                    </a>
+                    <a href="#" class="icon5a mx-1">
+                      <i
+                        class="fab fa-youtube d-flex justify-content-center align-items-center icon5child"
+                      ></i>
+                    </a>
+                    <a href="#" class="icon5a mx-1">
+                      <i
+                        class="fab fa-tiktok d-flex justify-content-center align-items-center icon5child"
+                      ></i>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    {% include 'partials/footer.html' %}
+{% endblock %}

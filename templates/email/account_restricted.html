@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Account Access Temporarily Restricted</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #dc3545; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f8f9fa; }
+        .alert { background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; margin: 15px 0; border-radius: 5px; color: #721c24; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        .contact-info { background: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; margin: 15px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 Account Access Restricted</h1>
+        </div>
+        
+        <div class="content">
+            <p>Dear {{ user.get_full_name|default:user.username }},</p>
+            
+            <div class="alert">
+                <strong>⚠️ Important Notice:</strong> Your account access has been temporarily restricted due to security concerns.
+            </div>
+            
+            <p><strong>Risk Score:</strong> {{ risk_score }}/100</p>
+            <p><strong>Restriction Date:</strong> {{ "now"|date:"F j, Y g:i A" }}</p>
+            
+            <p>Your account has been temporarily deactivated due to elevated security risk indicators. This is a precautionary measure to protect your account and our systems.</p>
+            
+            <h3>What This Means:</h3>
+            <ul>
+                <li>You will not be able to log in until the restriction is lifted</li>
+                <li>All active sessions have been terminated</li>
+                <li>Your account data remains secure and intact</li>
+            </ul>
+            
+            <h3>Next Steps:</h3>
+            <p>To restore access to your account, please contact your system administrator immediately with the following information:</p>
+            
+            <div class="contact-info">
+                <ul>
+                    <li><strong>Your username:</strong> {{ user.username }}</li>
+                    <li><strong>Your email:</strong> {{ user.email }}</li>
+                    <li><strong>Risk score:</strong> {{ risk_score }}/100</li>
+                    <li><strong>Date of restriction:</strong> {{ "now"|date:"F j, Y g:i A" }}</li>
+                </ul>
+            </div>
+            
+            <p>Our security team will review your account and work with you to resolve any security concerns before restoring access.</p>
+            
+            <p><strong>Important:</strong> This restriction is temporary and is designed to protect your account. We apologize for any inconvenience.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This restriction was applied automatically by our security system.<br>
+            Please contact your system administrator for assistance.</p>
+            <p><small>For security questions, contact your IT support team.</small></p>
+        </div>
+    </div>
+</body>
+</html>
